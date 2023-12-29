@@ -42,25 +42,25 @@ const create = async (req: Request, res: Response, next: NextFunction) => {
       newUser.identifier = identifier;
       newUser.isActive = false;
 
-      const createdUser = await UserDAL.createWithTransaction(newUser, session);
-      const newUserOtp = await OTPDal.createWithTransaction(
-        { user: createdUser[0]._id, otp: generateOTP(6) },
-        session
-      );
-      const encrptedUserId = encryptId(createdUser[0]._id);
+      // const createdUser = await UserDAL.createWithTransaction(newUser, session);
+      // const newUserOtp = await OTPDal.createWithTransaction(
+      //   { user: createdUser[0]._id, otp: generateOTP(6) },
+      //   session
+      // );
+      // const encrptedUserId = encryptId(createdUser[0]._id);
 
-      const credentials = {
-        intent: "Verify Email",
-        link: ``,
-        to: newUser.email,
-        proc: "Verify Email",
-        extra: "Generated link expires within an hour",
-      };
+      // const credentials = {
+      //   intent: "Verify Email",
+      //   link: ``,
+      //   to: newUser.email,
+      //   proc: "Verify Email",
+      //   extra: "Generated link expires within an hour",
+      // };
 
-      if (!(await sendMail(credentials)))
-        return res
-          .status(404)
-          .json(new CustomError("Server Error, please try again later", 404));
+      // if (!(await sendMail(credentials)))
+      //   return res
+      //     .status(404)
+      //     .json(new CustomError("Server Error, please try again later", 404));
 
       await session.commitTransaction();
       session.endSession();

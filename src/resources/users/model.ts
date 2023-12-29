@@ -16,12 +16,12 @@ const UserSchema: Schema = new Schema(
   {
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
-    DoB: { type: Date, required: true },
+    DoB: { type: Date, required: false },
     gender: { type: String, enum: genderType, required: true },
     email: { type: String, required: true, unique: true, index: true },
     password: { type: String, required: true },
     profileImage: { type: String },
-    role: { type: String, enum: roleType, default: "Patient", required: true },
+    role: { type: String, enum: roleType, required: true },
     isActive: { type: Boolean, default: false },
   },
 

@@ -38,6 +38,7 @@ const createWithTransaction =
     logger.info(`Creating ${model.modelName} with transaction`);
     return await model.create([props], { session: SESSION });
   };
+
 const createOne = (model: Model<any, {}, {}>) => async (props: any) => {
   logger.info(`Creating ${model.modelName}`);
   return await model.create(props);
@@ -54,6 +55,7 @@ const updateWithTransaction =
       session: SESSION,
     });
   };
+
 const updateOne =
   (model: Model<any, {}, {}>) => async (props: any, id: String) => {
     logger.info(`Updating ${model.modelName} with id: ${id}`);
@@ -82,24 +84,6 @@ const deleteOne =
     );
   };
 
-const getAllPopulateFacilityTest =
-  (model: Model<any, {}, {}>) =>
-  async (
-    props: any,
-    args1: any = {},
-    args2: any = {},
-    args3: any = {},
-    args4: any = {},
-    args5: any = {},
-    args6: any = {},
-    args7: any = {}
-  ) => {
-    logger.info(`Fetching all ${model.modelName} with props: ${props}`);
-    return await model
-      .aggregate([args1, args2, args3, args4, args5, args6, args7])
-      .exec();
-  };
-
 const getAllPopulated =
   (model: Model<any, {}, {}>) =>
   async (
@@ -119,6 +103,7 @@ const getAllPopulated =
       .populate(args4)
       .exec();
   };
+
 const getOnePopulated =
   (model: Model<any, {}, {}>) =>
   async (
@@ -151,7 +136,6 @@ const dataAccessLayer = (model: Model<any, {}, {}>) => ({
   createOne: createOne(model),
   deleteOne: deleteOne(model),
   getAllSecured: getAllSecured(model),
-  getAllPopulateFacilityTest: getAllPopulateFacilityTest(model),
   createWithTransaction: createWithTransaction(model),
   updateWithTransaction: updateWithTransaction(model),
   getAllPopulated: getAllPopulated(model),
