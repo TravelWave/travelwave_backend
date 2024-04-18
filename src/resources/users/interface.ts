@@ -1,15 +1,17 @@
 import { Document } from "mongoose";
 
-interface IUserInterface extends Document {
-  firstName: String;
-  lastName: String;
-  email: String;
-  password: String;
-  DoB: Date;
-  gender: String;
-  profileImage: String;
-  role: String;
-  isActive: Boolean;
+interface CustomUserInterface extends Document {
+  full_name: string;
+  phone_number: string;
+  password: string;
+  is_staff: boolean;
+  is_superuser: boolean;
+  is_driver: boolean;
+  rating: number;
+  driver_license?: string;
+  created_at: Date;
+  updated_at: Date;
+  token?: string;
 }
 
-export default IUserInterface;
+export default CustomUserInterface;

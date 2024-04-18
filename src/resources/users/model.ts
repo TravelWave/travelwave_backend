@@ -1,37 +1,28 @@
 import mongoose, { Schema } from "mongoose";
-import IUserInterface from "./interface";
+import CustomUserInterface from "./interface";
+import { required } from "joi";
 
-enum genderType {
-  M = "Male",
-  F = "Female",
-}
-
-enum roleType {
-  Driver = "Driver",
-  Passanger = "Passanger",
-  Admin = "Admin",
-}
-
-const UserSchema: Schema = new Schema(
-  {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    DoB: { type: Date, required: false },
-    gender: { type: String, enum: genderType, required: true },
-    email: { type: String, required: true, unique: true, index: true },
-    password: { type: String, required: true },
-    profileImage: { type: String },
-    role: { type: String, enum: roleType, required: true },
-    isActive: { type: Boolean, default: false },
-  },
-
-  { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
-);
-
-UserSchema.virtual("fullName").get(function () {
-  return `${this.firstName} ${this.lastName}`;
+const CustomUserSchema = new Schema({
+  full_name: { type: String, required: true },
+  phone_number: { type: String, unique: true, required: true },
+  password: { type: String, required: true },
+  is_staff: { type: Boolean, default: true },
+  is_superuser: { type: Boolean, default: true },
+  is_driver: { type: Boolean, default: false },
+  rating: { type: Number, default: 5.0 },
+  driver_license: { type: String, required: false },
+  created_at: { type: Date, default: Date.now },
+  updated_at: { type: Date, default: Date.now },
+  token: { type: String, required: false },
 });
 
-UserSchema.set("toJSON", { virtuals: true });
+CustomUserSchema.virtual("fullName").get(function () {
+  return `${this.full_name}`;
+});
 
-export default mongoose.model<IUserInterface>("User", UserSchema);
+CustomUserSchema.set("toJSON", { virtuals: true });
+
+export default mongoose.model<CustomUserInterface>(
+  "CustomUser",
+  CustomUserSchema
+);

@@ -141,6 +141,7 @@ const dataAccessLayer = (model: Model<any, {}, {}>) => ({
   getAllPopulated: getAllPopulated(model),
   getOnePopulated: getOnePopulated(model),
   aggregatedQuery: aggregatedQuery(model),
+  getAll: getAll(model),
 });
 
 export default dataAccessLayer;

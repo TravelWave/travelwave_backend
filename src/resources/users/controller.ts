@@ -1,386 +1,192 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { encryptId, decryptId } from "../../middlewares/utils/id-encrypt";
-import dataAccessLayer from "../../common/dal";
 import { CustomError } from "../../middlewares/utils/errorModel";
-import User from "./model";
-import db from "../../services/db";
+import CustomUser from "./model";
+import CustomUserInterface from "./interface";
 import { generateOTP } from "../../middlewares/utils/otp-gen";
 import { sendMail } from "../../services/mail";
-import OtpUser from "../otp-user/model";
-import { streamUpload } from "../../services/bucket";
+import dataAccessLayer from "../../common/dal";
+import db from "../../services/db";
+import logger from "../../common/logger";
 
-const UserDAL = dataAccessLayer(User);
-const OTPDal = dataAccessLayer(OtpUser);
+const UserDAL = dataAccessLayer(CustomUser);
+// const OTPDal = dataAccessLayer(OtpUser);
 
-const create = async (req: Request, res: Response, next: NextFunction) => {
-  const { address, ...newUser } = req.body;
-  const emailExist = await UserDAL.getOne({ email: newUser.email });
+// Register User Controller
+export const registerUser = async (req: Request, res: Response) => {
+  const session = await db.Connection.startSession();
+  try {
+    const { full_name, phone_number, is_driver, driver_license, password } =
+      req.body;
 
-  if (!emailExist) {
-    const session = await db.Connection.startSession();
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    try {
-      session.startTransaction();
+    session.startTransaction();
 
-      const lastName =
-        newUser.lastName.charAt(0).toUpperCase() +
-        newUser.lastName.slice(1).toLowerCase();
-      const firstName =
-        newUser.firstName.charAt(0).toUpperCase() +
-        newUser.firstName.slice(1).toLowerCase();
-      newUser.lastName = lastName;
-      newUser.firstName = firstName;
+    const newUser = await UserDAL.createOne({
+      full_name,
+      phone_number,
+      is_driver,
+      driver_license,
+      password: hashedPassword,
+    });
 
-      const randomSalt = bcrypt.genSaltSync(12);
+    await session.commitTransaction();
+    res.status(201).json(newUser);
+    await session.endSession();
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Error registering user:", error);
+    res.status(400).json({ error: "Error registering user" });
+  }
+};
 
-      let identifier = `${firstName}.${randomSalt}`;
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    const { phone_number, password } = req.body;
 
-      newUser.password = bcrypt.hashSync(newUser.password, 12);
-      newUser.profileImage = `https://avatars.dicebear.com/api/initials/${newUser.firstName}_${newUser.lastName}.png`;
-      newUser.identifier = identifier;
-      newUser.isActive = false;
+    const user = await CustomUser.findOne({ phone_number });
 
-      // const createdUser = await UserDAL.createWithTransaction(newUser, session);
-      // const newUserOtp = await OTPDal.createWithTransaction(
-      //   { user: createdUser[0]._id, otp: generateOTP(6) },
-      //   session
-      // );
-      // const encrptedUserId = encryptId(createdUser[0]._id);
-
-      // const credentials = {
-      //   intent: "Verify Email",
-      //   link: ``,
-      //   to: newUser.email,
-      //   proc: "Verify Email",
-      //   extra: "Generated link expires within an hour",
-      // };
-
-      // if (!(await sendMail(credentials)))
-      //   return res
-      //     .status(404)
-      //     .json(new CustomError("Server Error, please try again later", 404));
-
-      await session.commitTransaction();
-      session.endSession();
-      return res.status(200).json({ message: "user created" });
-    } catch {
-      session.abortTransaction();
-      return res.status(400).json({ message: "Task failed" });
+    if (!user) {
+      throw new CustomError("Invalid phone number or password", 400);
     }
-  } else {
-    return res
-      .status(409)
-      .json(new CustomError("That email is taken. Try another", 409));
-  }
-};
 
-// const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
-//   const userId = decryptId(req.params.id);
-//   const userOtp = req.params.otp;
-
-//   const registeredOTP = await OTPDal.getOne({ id: userId, otp: userOtp });
-//   if (!registeredOTP)
-//     return res
-//       .status(401)
-//       .json(
-//         new CustomError(
-//           "Email Verification Failed or Email already verified",
-//           400
-//         )
-//       );
-
-//   await UserDAL.updateOne({ isActive: true }, userId);
-//   OTPDal.deleteOne(registeredOTP._id, true, { otp: userOtp });
-//   res.writeHead(302, {
-//     location: "",
-//   });
-//   res.end();
-// };
-
-const login = (req: Request, res: Response, next: NextFunction) => {
-  let { email, password } = req.body;
-
-  UserDAL.getOne({ email: email }, "address")
-    .then((user: any) => {
-      if (user && !user.isActive)
-        throw new CustomError(
-          "Account is not activated, please verify your email or reset paswword",
-          401
-        );
-
-      if (user && bcrypt.compareSync(password, user.password)) {
-        const token = jwt.sign(
-          { sub: user._id, role: user.role },
-          process.env.JWT_SECRET
-        );
-        const { password, ...userWithoutPassword } = user;
-
-        res.status(200).json({
-          ...userWithoutPassword,
-          token,
-        });
-      } else throw new CustomError("Wrong username or password", 401);
-    })
-    .catch((err) => {
-      next(err);
-    });
-};
-
-const getAllUser = (req: Request, res: Response, next: NextFunction) => {
-  const filter = { isActive: true };
-  UserDAL.getAllSecured(filter)
-    .then((data: any) => {
-      if (data.length == 0) {
-        throw new CustomError("Data not found", 404, data);
-      }
-      res.status(200).json(data);
-    })
-    .catch((err) => {
-      next(err);
-    });
-};
-
-const getUser = (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.params.id;
-  UserDAL.getOnePopulated(
-    { _id: userId, isActive: true },
-    "address",
-    "institution"
-  )
-    .then((data: any) => {
-      if (!data) {
-        throw new CustomError("User not found", 404);
-      }
-      res.status(200).json(data);
-    })
-    .catch((err) => {
-      next(err);
-    });
-};
-
-const getLoggedUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const loggedInUser = await UserDAL.getOne(
-    { email: req.user.email },
-    "address"
-  );
-  if (loggedInUser) {
-    res.status(200).json(loggedInUser);
-  } else {
-    return res
-      .status(404)
-      .json(new CustomError("No logged in user found", 404));
-  }
-};
-
-const updateUser = async (req: Request, res: Response, next: NextFunction) => {
-  const { address, ...updatedUserInfo } = req.body;
-  const userId = req.params.id;
-
-  if (req.user._id == req.params.id) {
-    try {
-      const session = await db.Connection.startSession();
-      session.startTransaction();
-
-      await UserDAL.updateWithTransaction(updatedUserInfo, userId, session);
-      await session.commitTransaction();
-      session.endSession();
-      return res.status(200).json({ message: "Information updated" });
-    } catch (error) {
-      return res.status(400).json(new CustomError("Update Failed", 400));
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new CustomError("Invalid phone number or password", 400);
     }
-  } else {
-    return res.status(401).json(new CustomError("Not Authorized", 401));
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+
+    // Save token to user
+    if (!user.token) user.token = token;
+    else user.token = token;
+
+    await user.save();
+
+    res.status(200).json({ token });
+  } catch (error) {
+    console.error("Error logging in user:", error);
+    res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
   }
 };
 
-const deleteUser = (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.params.id;
-  if (req.user._id == userId) {
-    UserDAL.deleteOne(userId)
-      .then((data) => {
-        if (!data) {
-          throw new CustomError("Cannot delete user", 404);
-        }
-        res.status(200).json({ message: "Account deleted", data });
-      })
-      .catch((err) => {
-        next(err);
-      });
-  } else {
-    return res.status(401).json(new CustomError("Not Authorized", 401));
+export const logoutUser = async (req: Request, res: Response) => {
+  const session = await db.Connection.startSession();
+  try {
+    session.startTransaction();
+    const user = req.user as CustomUserInterface;
+
+    // Revoke the token from the database using UserDAL
+    await UserDAL.updateOne({ token: null }, user._id);
+
+    await session.commitTransaction();
+    res.status(200).json({ message: "Successfully logged out" });
+    await session.endSession();
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Error logging out user:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-// const forgetPassword = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   // get user by the email
-//   const userEmail = req.body.email
-//   const User = await UserDAL.getOne({ email: userEmail, isActive: true })
-//   if (!User) {
-//     return res.status(400).json({ message: 'user with this email not found' })
-//   }
+export const changeUserPassword = async (req: Request, res: Response) => {
+  try {
+    const user = req.user as CustomUserInterface;
+    const { old_password, new_password } = req.body;
 
-//   // generate the OTP
-//   const OTP = generateOTP(6)
-//   const newOTP = {
-//     user: User._id,
-//     otp: OTP
-//   }
+    const userFromDB = await CustomUser.findOne({ _id: user._id });
 
-//   // generate OTP and link it with the user
-//   const data = await OTPDal.createOne(newOTP)
-//   if (!data) {
-//     return res.status(400).json({ message: 'error generating reset link' })
-//   }
+    if (!userFromDB) {
+      throw new CustomError("User not found", 404);
+    }
 
-//   // send email to the user with the generated email
-//   const encryptedUserId = encryptId(User._id)
-//   const credentials = {
-//     link: OTP,
-//     to: User.email,
-//     intent: 'Resetting your user password',
-//     proc: 'Password Reset',
-//     extra: 'Generated OTP expires within a day'
-//   }
+    const isPasswordValid = await bcrypt.compare(
+      old_password,
+      userFromDB.password
+    );
 
-//   const Email = await sendMail(credentials)
-//   if (!Email) {
-//     OTPDal.deleteOne('', true, { _id: data._id })
-//     return res
-//       .status(500)
-//       .json({ message: 'could not send reset link, try later' })
-//   }
-//   return res
-//     .status(200)
-//     .json({ message: 'Password reset link sent to the email' })
-// }
+    if (!isPasswordValid) {
+      throw new CustomError("Invalid old password", 400);
+    }
 
-// const validateOtp = async (req: Request, res: Response, next: NextFunction) => {
-//   const userEmail = req.body.email
-//   const userOtp = req.body.otp
-//   const userInfo = await UserDAL.getOne({ email: userEmail })
-//   // search for an OTP with the requested User
-//   try {
-//     const otp = await OTPDal.getOne({ otp: userOtp, user: userInfo._id })
-//     if (otp) {
-//       console.log(otp.user, userInfo._id)
-//       return res.status(200).json({ message: 'Valid' })
-//     } else {
-//       return res.status(400).json({ message: 'Not Valid' })
-//     }
-//   } catch (err) {
-//     return res.status(500).json(err)
-//   }
-// }
+    const hashedPassword = await bcrypt.hash(new_password, 10);
 
-// const resetPassword = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   const { otp, password } = req.body
-//   const userOtp = await OTPDal.getOne({ otp: otp })
+    await UserDAL.updateOne({ password: hashedPassword }, user._id);
 
-//   const newPassword = bcrypt.hashSync(password, 12)
-//   UserDAL.updateOne({ password: newPassword }, userOtp.user)
-//     .then((data) => {
-//       if (!data) {
-//         return res.status(400).send("Couldn't update password ")
-//       }
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Error changing user password:", error);
+    res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
 
-//       res.status(200).json({ message: 'Password reset succesfully' })
-//       OTPDal.deleteOne('', true, { otp: otp })
-//       return
-//     })
-//     .catch((err) => {
-//       next(err)
-//     })
-// }
+// Delete User Account Controller
+export const deleteUserAccount = async (req: Request, res: Response) => {
+  try {
+    const user = req.user as CustomUserInterface;
 
-// const changePassword = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   console.log('---->change password called')
-//   const oldPass = req.body.oldPass
-//   const newPass = req.body.newPass
-//   const newPassword = bcrypt.hashSync(newPass, 12)
-//   const userId = req.user._id
-//   const user = await UserDAL.getOne({ _id: userId, isActive: true })
+    await UserDAL.deleteOne(user._id);
 
-//   if (bcrypt.compareSync(oldPass, user.password)) {
-//     UserDAL.updateOne({ password: newPassword }, userId)
-//       .then((data) => {
-//         if (!data) {
-//           return res.status(400).send("Couldn't update password ")
-//         }
+    res.status(200).json({ message: "Account deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user account:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
-//         return res.status(200).json({ message: 'Password changed succesfully' })
-//       })
-//       .catch((err) => {
-//         next(err)
-//       })
-//   } else {
-//     return res
-//       .status(400)
-//       .json({ message: 'The old password you entered is wrong' })
-//   }
-// }
+// Get User Data Controller
+export const getUserData = async (req: Request, res: Response) => {
+  try {
+    const user = req.user as CustomUserInterface;
 
-// const uploadProfileImage = async (
-//   req: any,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   const currentUser = req.user._id
-//   const userId = req.params.id
-//   if (currentUser == userId) {
-//     try {
-//       const resultURL = await streamUpload(req, 'user-profiles')
-//       if (resultURL) {
-//         UserDAL.updateOne({ profileImage: resultURL }, userId)
-//           .then((data) => {
-//             if (!data) {
-//               throw new CustomError('Cannot update User', 400)
-//             }
-//             res.status(200).json({ message: 'image upload successful', data })
-//           })
-//           .catch((err) => {
-//             res.status(400).json(err)
-//           })
-//       } else {
-//         res.status(400).json({ message: 'error uploading image to storage' })
-//       }
-//     } catch (error) {
-//       throw new CustomError('There is an error uploading')
-//     }
-//   } else {
-//     res.status(401).json({ message: 'Not Authorized for this Operations' })
-//   }
-// }
+    res.status(200).json({
+      full_name: user.full_name,
+      phone_number: user.phone_number,
+      is_driver: user.is_driver,
+      driver_license: user.driver_license || null,
+    });
+  } catch (error) {
+    console.error("Error getting user data:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getAllUsers = async (req: Request, res: Response) => {
+  const session = await db.Connection.startSession();
+  try {
+    // Start a new session for the query
+    session.startTransaction();
+
+    // Retrieve all users using UserDAL and pass the session
+    const users = await UserDAL.getMany({});
+
+    // Commit the transaction
+    await session.commitTransaction();
+
+    res.status(200).json(users);
+  } catch (error) {
+    // Abort the transaction if an error occurs
+    await session.abortTransaction();
+    console.error("Error getting all users:", error);
+    res.status(500).json({ error: "Internal server error" });
+  } finally {
+    // End the session
+    session.endSession();
+  }
+};
 
 export default {
-  create,
-  //   verifyEmail,
-  login,
-  getAllUser,
-  getUser,
-  updateUser,
-  deleteUser,
-  getLoggedUser,
-  // forgetPassword,
-  //   validateOtp,
-  //   resetPassword,
-  //   changePassword,
-  //   uploadProfileImage,
+  registerUser,
+  loginUser,
+  logoutUser,
+  changeUserPassword,
+  deleteUserAccount,
+  getUserData,
+  getAllUsers,
 };
