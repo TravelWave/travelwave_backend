@@ -5,13 +5,19 @@ import { CustomError } from "../../middlewares/utils/errorModel";
 import CustomUser from "./model";
 import CustomUserInterface from "./interface";
 import { generateOTP } from "../../middlewares/utils/otp-gen";
-import { sendMail } from "../../services/mail";
 import dataAccessLayer from "../../common/dal";
 import db from "../../services/db";
 import logger from "../../common/logger";
+import twilio from "twilio";
+import cron from "node-cron";
 
 const UserDAL = dataAccessLayer(CustomUser);
 // const OTPDal = dataAccessLayer(OtpUser);
+
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 // Register User Controller
 export const registerUser = async (req: Request, res: Response) => {
@@ -20,9 +26,57 @@ export const registerUser = async (req: Request, res: Response) => {
     const { full_name, phone_number, is_driver, driver_license, password } =
       req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     session.startTransaction();
+
+    if (!full_name || !phone_number || !password) {
+      throw new CustomError("Please provide required fields", 400);
+    }
+
+    // Check if user exists
+    const userExists = await CustomUser.findOne({ phone_number });
+
+    if (userExists) {
+      throw new CustomError("User already exists", 400);
+    }
+
+    // Generate OTP
+    const otp = generateOTP(6);
+
+    // Schedule task to remove OTP after 1 minute
+    cron.schedule(
+      `* * * * *`,
+      async () => {
+        try {
+          const user = await CustomUser.findOne({ phone_number });
+          if (user && user.otp === otp) {
+            user.otp = null;
+            await user.save();
+            logger.info(`OTP ${otp} removed after 1 minute.`);
+          }
+        } catch (error) {
+          console.error("Error removing OTP:", error);
+        }
+      },
+      {
+        scheduled: true,
+        timezone: "Africa/Nairobi",
+      }
+    );
+
+    // Send OTP via Twilio
+    await twilioClient.messages.create({
+      body: `Your OTP for registration is: ${otp}`,
+      to: phone_number, // user's phone number
+      from: process.env.TWILIO_PHONE_NUMBER, // Twilio phone number
+    });
+
+    // Start the scheduled task
+    const task = cron.schedule("* * * * *", () => {
+      logger.info("Task executed");
+    });
+    task.start();
+
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await UserDAL.createOne({
       full_name,
@@ -30,6 +84,7 @@ export const registerUser = async (req: Request, res: Response) => {
       is_driver,
       driver_license,
       password: hashedPassword,
+      otp: otp,
     });
 
     await session.commitTransaction();
@@ -39,6 +94,83 @@ export const registerUser = async (req: Request, res: Response) => {
     await session.abortTransaction();
     console.error("Error registering user:", error);
     res.status(400).json({ error: "Error registering user" });
+  }
+};
+
+const resendOTP = async (req: Request, res: Response) => {
+  try {
+    const { phone_number } = req.body;
+
+    const user = await CustomUser.findOne({ phone_number });
+
+    if (!user) {
+      throw new CustomError("User not found", 404);
+    }
+
+    // Generate OTP
+    const otp = generateOTP(6);
+
+    // Schedule task to remove OTP after 1 minute
+    cron.schedule(
+      `* * * * *`,
+      async () => {
+        try {
+          const user = await CustomUser.findOne({ phone_number });
+          if (user && user.otp === otp) {
+            user.otp = null;
+            await user.save();
+            logger.info(`OTP ${otp} removed after 1 minute.`);
+          }
+        } catch (error) {
+          console.error("Error removing OTP:", error);
+        }
+      },
+      { scheduled: true, timezone: "Africa/Nairobi" }
+    );
+
+    // Send OTP via Twilio
+    await twilioClient.messages.create({
+      body: `Your OTP for registration is: ${otp}`,
+      to: phone_number, // user's phone number
+      from: process.env.TWILIO_PHONE_NUMBER, // Twilio phone number
+    });
+
+    user.otp = otp;
+    await user.save();
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    console.error("Error resending OTP:", error);
+    res.status(error.statusCode || 500).json({ error: error.message });
+  }
+};
+
+const verifyOTP = async (req: Request, res: Response) => {
+  try {
+    const { phone_number } = req.body;
+
+    const { otp } = req.params;
+
+    const user = await CustomUser.findOne({ phone_number });
+
+    if (!user) {
+      throw new CustomError("User not found", 404);
+    }
+    logger.info(user.otp);
+    logger.info(`Real OTP ${otp}`);
+
+    if (user.otp !== otp) {
+      throw new CustomError("Invalid OTP", 400);
+    }
+
+    user.is_active = true;
+    user.otp = null;
+    await user.save();
+
+    res.status(200).json({ message: "OTP verified successfully" });
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    res.status(error.statusCode || 500).json({ error: error.message });
   }
 };
 
@@ -55,6 +187,10 @@ export const loginUser = async (req: Request, res: Response) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new CustomError("Invalid phone number or password", 400);
+    }
+
+    if (!user.is_active) {
+      throw new CustomError("Please verify your phone number", 400);
     }
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
@@ -189,4 +325,6 @@ export default {
   deleteUserAccount,
   getUserData,
   getAllUsers,
+  resendOTP,
+  verifyOTP,
 };

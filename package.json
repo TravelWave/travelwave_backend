@@ -60,6 +60,7 @@
     "nodemailer": "^6.9.7",
     "otp-generator": "^4.0.1",
     "pino": "^8.17.1",
-    "streamifier": "^0.1.1"
+    "streamifier": "^0.1.1",
+    "twilio": "^5.0.4"
   }
 }

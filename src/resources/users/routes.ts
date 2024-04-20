@@ -8,7 +8,7 @@ const router = Router();
 
 router
   .route("/")
-  .get(auth, userController.getAllUsers)
+  .get(userController.getAllUsers)
   .post(validateJoi(Schemas.user.create), userController.registerUser);
 
 // router.route('/new-password').put(userController.resetPassword)
@@ -30,5 +30,8 @@ router.route("/login").post(userController.loginUser);
 router.route("/logout").post(auth, userController.logoutUser);
 // router.route('/forgetPassword').post(userController.forgetPassword)
 // router.route('/resetPassword').post(userController.resetPassword)
+
+router.route("/verify/:id/:otp").get(userController.verifyOTP);
+router.route("/resendOTP").post(userController.resendOTP);
 
 export default router;

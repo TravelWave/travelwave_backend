@@ -1,6 +1,6 @@
 import Joi, { ObjectSchema } from "joi";
 import { NextFunction, Request, Response } from "express";
-import CustomUserInterface from "../resources/users/interface"; // Assuming this is the UserInterface from your Django model
+import CustomUserInterface from "../resources/users/interface";
 import CustomUser from "../resources/users/model";
 
 // Custom Joi validation for Mongoose ObjectId
@@ -29,18 +29,6 @@ export const validateJoi = (schema: ObjectSchema) => {
   };
 };
 
-// Define the address schema
-const addressSchema = Joi.object().keys({
-  city: Joi.string(),
-  subCity: Joi.string(),
-  phone: Joi.string()
-    .max(14)
-    .min(10)
-    .pattern(/^\+[0-9]+$/),
-  woreda: Joi.string(),
-  houseNo: Joi.string(),
-});
-
 // Define the user schema using the UserInterface
 export const Schemas = {
   user: {
@@ -48,9 +36,8 @@ export const Schemas = {
       full_name: Joi.string().min(2).max(100),
       phone_number: Joi.string().max(15).required(),
       is_driver: Joi.boolean().required(),
-      driver_license: Joi.string(),
       password: Joi.string().min(6).max(100).required(),
-      // Include other fields as needed
+      rating: Joi.number().min(0).max(5),
     }),
   },
 };

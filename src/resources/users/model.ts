@@ -1,6 +1,5 @@
 import mongoose, { Schema } from "mongoose";
 import CustomUserInterface from "./interface";
-import { required } from "joi";
 
 const CustomUserSchema = new Schema({
   full_name: { type: String, required: true },
@@ -13,7 +12,9 @@ const CustomUserSchema = new Schema({
   driver_license: { type: String, required: false },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
+  is_active: { type: Boolean, default: false },
   token: { type: String, required: false },
+  otp: { type: String, required: false },
 });
 
 CustomUserSchema.virtual("fullName").get(function () {

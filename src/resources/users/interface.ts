@@ -11,7 +11,9 @@ interface CustomUserInterface extends Document {
   driver_license?: string;
   created_at: Date;
   updated_at: Date;
+  is_active: boolean;
   token?: string;
+  otp?: string;
 }
 
 export default CustomUserInterface;
