@@ -5,6 +5,8 @@ import helmet from "helmet";
 import compression from "compression";
 import routes from "./common/routes";
 import errorHandler from "./middlewares/errorHandler";
+import cron from "node-cron";
+import logger from "./common/logger";
 
 const app: Application = express();
 
@@ -25,6 +27,10 @@ app.get("/", (req: Request, res: Response) => {
     "health-check": "OK: top level api working",
   });
 });
+
+// cron.schedule("*/14 * * * *", () => {
+//   logger.info("Running health check every 14 minutes");
+// });
 
 app.use("/v1/", routes);
 app.use(errorHandler);

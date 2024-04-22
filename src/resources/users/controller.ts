@@ -12,7 +12,6 @@ import twilio from "twilio";
 import cron from "node-cron";
 
 const UserDAL = dataAccessLayer(CustomUser);
-// const OTPDal = dataAccessLayer(OtpUser);
 
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -285,7 +284,6 @@ export const getUserData = async (req: Request, res: Response) => {
       full_name: user.full_name,
       phone_number: user.phone_number,
       is_driver: user.is_driver,
-      driver_license: user.driver_license || null,
     });
   } catch (error) {
     console.error("Error getting user data:", error);

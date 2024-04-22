@@ -8,10 +8,10 @@ interface CustomUserInterface extends Document {
   is_superuser: boolean;
   is_driver: boolean;
   rating: number;
-  driver_license?: string;
   created_at: Date;
   updated_at: Date;
   is_active: boolean;
+  profile_picture?: string;
   token?: string;
   otp?: string;
 }
