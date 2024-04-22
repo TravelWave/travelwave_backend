@@ -7,6 +7,7 @@ import routes from "./common/routes";
 import errorHandler from "./middlewares/errorHandler";
 import cron from "node-cron";
 import logger from "./common/logger";
+import bodyParser from "body-parser";
 
 const app: Application = express();
 
@@ -28,9 +29,9 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
-// cron.schedule("*/14 * * * *", () => {
-//   logger.info("Running health check every 14 minutes");
-// });
+cron.schedule("*/14 * * * *", () => {
+  logger.info("Running health check every 14 minutes");
+});
 
 app.use("/v1/", routes);
 app.use(errorHandler);

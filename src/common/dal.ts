@@ -68,19 +68,19 @@ const updateOne =
 
 const deleteOne =
   (model: Model<any, {}, {}>) =>
-  async (id: any, permanentDelete?: Boolean, props?: Object) => {
+  async (id: any, permanentDelete: Boolean, props?: Object) => {
     logger.info(`Deleting ${model.modelName} with id: ${id}`);
     if (permanentDelete == true) {
       if (typeof props == "undefined") props = { _id: id };
 
       return await model.deleteOne(props);
     }
-
+    logger.info(`Soft deleting ${model.modelName} with id: ${id}`);
     return await model.updateOne(
       {
         _id: id,
       },
-      { $set: { isActive: false } }
+      { $set: { is_active: false } }
     );
   };
 

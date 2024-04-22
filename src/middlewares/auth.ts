@@ -9,7 +9,7 @@ const UserDAL = dataAccessLayer(User);
 
 export const auth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = req.headers.authorization;
+    const token = req.headers.authorization?.split(" ")[1];
     const decoded = verify(token, process.env.JWT_SECRET);
     const user = await UserDAL.getAllSecured({ _id: decoded.userId });
 

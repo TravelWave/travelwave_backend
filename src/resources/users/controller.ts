@@ -22,8 +22,7 @@ const twilioClient = twilio(
 export const registerUser = async (req: Request, res: Response) => {
   const session = await db.Connection.startSession();
   try {
-    const { full_name, phone_number, is_driver, driver_license, password } =
-      req.body;
+    const { full_name, phone_number, is_driver, password } = req.body;
 
     session.startTransaction();
 
@@ -41,16 +40,16 @@ export const registerUser = async (req: Request, res: Response) => {
     // Generate OTP
     const otp = generateOTP(6);
 
-    // Schedule task to remove OTP after 1 minute
+    // Schedule task to remove OTP after 3 minutes
     cron.schedule(
-      `* * * * *`,
+      "*/3 * * * *",
       async () => {
         try {
           const user = await CustomUser.findOne({ phone_number });
           if (user && user.otp === otp) {
             user.otp = null;
             await user.save();
-            logger.info(`OTP ${otp} removed after 1 minute.`);
+            logger.info(`OTP ${otp} removed after 3 minutes.`);
           }
         } catch (error) {
           console.error("Error removing OTP:", error);
@@ -65,15 +64,9 @@ export const registerUser = async (req: Request, res: Response) => {
     // Send OTP via Twilio
     await twilioClient.messages.create({
       body: `Your OTP for registration is: ${otp}`,
-      to: phone_number, // user's phone number
-      from: process.env.TWILIO_PHONE_NUMBER, // Twilio phone number
+      to: phone_number,
+      from: process.env.TWILIO_PHONE_NUMBER,
     });
-
-    // Start the scheduled task
-    const task = cron.schedule("* * * * *", () => {
-      logger.info("Task executed");
-    });
-    task.start();
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -81,7 +74,6 @@ export const registerUser = async (req: Request, res: Response) => {
       full_name,
       phone_number,
       is_driver,
-      driver_license,
       password: hashedPassword,
       otp: otp,
     });
@@ -98,20 +90,22 @@ export const registerUser = async (req: Request, res: Response) => {
 
 const resendOTP = async (req: Request, res: Response) => {
   try {
-    const { phone_number } = req.body;
+    const { id } = req.params;
 
-    const user = await CustomUser.findOne({ phone_number });
+    const user = await CustomUser.findOne({ id });
 
     if (!user) {
       throw new CustomError("User not found", 404);
     }
+
+    const phone_number = user.phone_number;
 
     // Generate OTP
     const otp = generateOTP(6);
 
     // Schedule task to remove OTP after 1 minute
     cron.schedule(
-      `* * * * *`,
+      `*/3 * * * *`,
       async () => {
         try {
           const user = await CustomUser.findOne({ phone_number });
@@ -146,17 +140,13 @@ const resendOTP = async (req: Request, res: Response) => {
 
 const verifyOTP = async (req: Request, res: Response) => {
   try {
-    const { phone_number } = req.body;
+    const { id, otp } = req.params;
 
-    const { otp } = req.params;
-
-    const user = await CustomUser.findOne({ phone_number });
+    const user = await CustomUser.findOne({ id });
 
     if (!user) {
       throw new CustomError("User not found", 404);
     }
-    logger.info(user.otp);
-    logger.info(`Real OTP ${otp}`);
 
     if (user.otp !== otp) {
       throw new CustomError("Invalid OTP", 400);
@@ -230,18 +220,21 @@ export const logoutUser = async (req: Request, res: Response) => {
 
 export const changeUserPassword = async (req: Request, res: Response) => {
   try {
-    const user = req.user as CustomUserInterface;
     const { old_password, new_password } = req.body;
 
-    const userFromDB = await CustomUser.findOne({ _id: user._id });
+    const user = req.user as CustomUserInterface;
 
-    if (!userFromDB) {
+    if (!user) {
       throw new CustomError("User not found", 404);
     }
 
+    const realUser = await CustomUser.findOne({ _id: user._id });
+
+    console.log(old_password, new_password, realUser.password);
+
     const isPasswordValid = await bcrypt.compare(
       old_password,
-      userFromDB.password
+      realUser.password
     );
 
     if (!isPasswordValid) {
@@ -261,12 +254,11 @@ export const changeUserPassword = async (req: Request, res: Response) => {
   }
 };
 
-// Delete User Account Controller
 export const deleteUserAccount = async (req: Request, res: Response) => {
   try {
     const user = req.user as CustomUserInterface;
 
-    await UserDAL.deleteOne(user._id);
+    await UserDAL.deleteOne(user._id, false);
 
     res.status(200).json({ message: "Account deleted successfully" });
   } catch (error) {
@@ -275,16 +267,13 @@ export const deleteUserAccount = async (req: Request, res: Response) => {
   }
 };
 
-// Get User Data Controller
 export const getUserData = async (req: Request, res: Response) => {
   try {
-    const user = req.user as CustomUserInterface;
+    const { id } = req.params;
 
-    res.status(200).json({
-      full_name: user.full_name,
-      phone_number: user.phone_number,
-      is_driver: user.is_driver,
-    });
+    const user = await CustomUser.findOne({ id });
+
+    res.status(200).json(user);
   } catch (error) {
     console.error("Error getting user data:", error);
     res.status(500).json({ error: "Internal server error" });
