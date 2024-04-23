@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8000
 
 # Command to run your app using node
-CMD ["ts-node", "server.ts"]
+CMD ["node", "server.ts"]
