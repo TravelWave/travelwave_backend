@@ -37,36 +37,15 @@ export const registerUser = async (req: Request, res: Response) => {
       throw new CustomError("User already exists", 400);
     }
 
+    console.log("Phone number:", phone_number);
+
     // Generate OTP
-    const otp = generateOTP(6);
-
-    // Schedule task to remove OTP after 3 minutes
-    cron.schedule(
-      "*/3 * * * *",
-      async () => {
-        try {
-          const user = await CustomUser.findOne({ phone_number });
-          if (user && user.otp === otp) {
-            user.otp = null;
-            await user.save();
-            logger.info(`OTP ${otp} removed after 3 minutes.`);
-          }
-        } catch (error) {
-          console.error("Error removing OTP:", error);
-        }
-      },
-      {
-        scheduled: true,
-        timezone: "Africa/Nairobi",
-      }
-    );
-
-    // Send OTP via Twilio
-    await twilioClient.messages.create({
-      body: `Your OTP for registration is: ${otp}`,
-      to: phone_number,
-      from: process.env.TWILIO_PHONE_NUMBER,
-    });
+    await twilioClient.verify.v2
+      .services(process.env.TWILIO_SERVICE_SID)
+      .verifications.create({
+        to: phone_number,
+        channel: "sms",
+      });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -75,7 +54,6 @@ export const registerUser = async (req: Request, res: Response) => {
       phone_number,
       is_driver,
       password: hashedPassword,
-      otp: otp,
     });
 
     await session.commitTransaction();
@@ -140,23 +118,34 @@ const resendOTP = async (req: Request, res: Response) => {
 
 const verifyOTP = async (req: Request, res: Response) => {
   try {
-    const { id, otp } = req.params;
+    const { phone_number, otp } = req.body;
 
-    const user = await CustomUser.findOne({ id });
+    console.log("Phone number:", phone_number);
+    console.log("OTP:", otp);
+
+    const verifiedResponse = await twilioClient.verify.v2
+      .services(process.env.TWILIO_SERVICE_SID)
+      .verificationChecks.create({
+        to: phone_number,
+        code: otp,
+      });
+
+    console.log("Verified response:", verifiedResponse);
+
+    if (verifiedResponse.status !== "approved") {
+      throw new CustomError("Invalid OTP", 400);
+    }
+
+    const user = await CustomUser.findOne({ phone_number });
 
     if (!user) {
       throw new CustomError("User not found", 404);
     }
 
-    if (user.otp !== otp) {
-      throw new CustomError("Invalid OTP", 400);
-    }
-
     user.is_active = true;
-    user.otp = null;
     await user.save();
 
-    res.status(200).json({ message: "OTP verified successfully" });
+    res.status(200).json({ message: "Phone number verified successfully" });
   } catch (error) {
     console.error("Error verifying OTP:", error);
     res.status(error.statusCode || 500).json({ error: error.message });

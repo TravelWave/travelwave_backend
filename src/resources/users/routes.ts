@@ -21,7 +21,7 @@ router
 router.route("/login").post(userController.loginUser);
 router.route("/logout").post(auth, userController.logoutUser);
 
-router.route("/verify/:id/:otp").get(userController.verifyOTP);
+router.route("/verify").post(userController.verifyOTP);
 router.route("/resendOTP/:id").get(userController.resendOTP);
 
 export default router;
