@@ -3,7 +3,8 @@ import RideHistoryInterface from "./interface";
 
 const RideHistorySchema: Schema = new Schema({
   ride_id: { type: Schema.Types.ObjectId, ref: "Ride", required: true },
-  passenger: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  passenger: { type: Schema.Types.ObjectId, ref: "User", required: false },
+  driver: { type: Schema.Types.ObjectId, ref: "User", required: false },
   pickup_latitude: { type: Number, required: true },
   pickup_longitude: { type: Number, required: true },
   dropoff_latitude: { type: Number, required: true },

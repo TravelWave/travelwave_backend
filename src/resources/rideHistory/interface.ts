@@ -5,6 +5,7 @@ import RideInterface from "../ride/interface";
 interface RideHistoryInterface extends Document {
   ride_id: RideInterface["_id"]; // Assuming ride_id and passenger are references to documents
   passenger: CustomUserInterface["_id"];
+  driver: CustomUserInterface["_id"];
   pickup_latitude: number;
   pickup_longitude: number;
   dropoff_latitude: number;
