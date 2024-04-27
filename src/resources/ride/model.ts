@@ -2,11 +2,6 @@ import mongoose, { Schema } from "mongoose";
 import RideInterface from "./interface";
 
 const RideSchema = new Schema({
-  ride_id: {
-    type: String,
-    required: true,
-    unique: true,
-  },
   vehicle: {
     type: Schema.Types.ObjectId,
     ref: "Vehicle",
