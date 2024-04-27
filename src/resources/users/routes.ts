@@ -2,7 +2,6 @@ import { Router } from "express";
 import userController from "./controller";
 import { validateJoi, Schemas } from "../../middlewares/validate";
 import { auth } from "../../middlewares/auth";
-// import { fileUpload } from '../../middlewares/upload-via-stream'
 
 const router = Router();
 

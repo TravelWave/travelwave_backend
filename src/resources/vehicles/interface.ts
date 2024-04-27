@@ -2,7 +2,6 @@ import { Document, Types } from "mongoose";
 import CustomUserInterface from "../users/interface";
 
 interface VehicleInterface extends Document {
-  vehicle_id: Types.ObjectId;
   driver: CustomUserInterface["_id"];
   name: string;
   make: string;

@@ -4,12 +4,9 @@ import jwt from "jsonwebtoken";
 import { CustomError } from "../../middlewares/utils/errorModel";
 import CustomUser from "./model";
 import CustomUserInterface from "./interface";
-import { generateOTP } from "../../middlewares/utils/otp-gen";
 import dataAccessLayer from "../../common/dal";
 import db from "../../services/db";
-import logger from "../../common/logger";
 import twilio from "twilio";
-import cron from "node-cron";
 
 const UserDAL = dataAccessLayer(CustomUser);
 
@@ -18,7 +15,6 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
-// Register User Controller
 export const registerUser = async (req: Request, res: Response) => {
   const session = await db.Connection.startSession();
   try {
@@ -40,7 +36,7 @@ export const registerUser = async (req: Request, res: Response) => {
     console.log("Phone number:", phone_number);
 
     // Generate OTP
-    await twilioClient.verify.v2
+    const twilioResponse = await twilioClient.verify.v2
       .services(process.env.TWILIO_SERVICE_SID)
       .verifications.create({
         to: phone_number,
@@ -78,36 +74,12 @@ const resendOTP = async (req: Request, res: Response) => {
 
     const phone_number = user.phone_number;
 
-    // Generate OTP
-    const otp = generateOTP(6);
-
-    // Schedule task to remove OTP after 1 minute
-    cron.schedule(
-      `*/3 * * * *`,
-      async () => {
-        try {
-          const user = await CustomUser.findOne({ phone_number });
-          if (user && user.otp === otp) {
-            user.otp = null;
-            await user.save();
-            logger.info(`OTP ${otp} removed after 1 minute.`);
-          }
-        } catch (error) {
-          console.error("Error removing OTP:", error);
-        }
-      },
-      { scheduled: true, timezone: "Africa/Nairobi" }
-    );
-
-    // Send OTP via Twilio
-    await twilioClient.messages.create({
-      body: `Your OTP for registration is: ${otp}`,
-      to: phone_number, // user's phone number
-      from: process.env.TWILIO_PHONE_NUMBER, // Twilio phone number
-    });
-
-    user.otp = otp;
-    await user.save();
+    await twilioClient.verify.v2
+      .services(process.env.TWILIO_SERVICE_SID)
+      .verifications.create({
+        to: phone_number,
+        channel: "sms",
+      });
 
     res.status(200).json({ message: "OTP sent successfully" });
   } catch (error) {

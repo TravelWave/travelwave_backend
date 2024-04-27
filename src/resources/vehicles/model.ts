@@ -2,7 +2,6 @@ import mongoose, { Schema } from "mongoose";
 import VehicleInterface from "./interface";
 
 const VehicleSchema = new Schema({
-  vehicle_id: { type: Schema.Types.ObjectId, required: true },
   driver: { type: Schema.Types.ObjectId, ref: "CustomUser", required: true },
   name: { type: String, required: true },
   make: { type: String, required: true },
