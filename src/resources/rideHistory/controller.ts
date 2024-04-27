@@ -39,7 +39,6 @@ export const createRideHistory = async (req: Request, res: Response) => {
     const rideId = ride._id;
 
     rideHistory.ride_id = rideId;
-    console.log("Ride History: ", rideHistory);
 
     const createdRideHistory = await rideHistoryDAL.createOne(rideHistory);
     res.status(201).json(createdRideHistory);
