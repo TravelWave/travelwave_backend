@@ -19,9 +19,21 @@ const RideSchema = new Schema({
     type: Number,
     required: true,
   },
+  destination_latitude: {
+    type: Number,
+    required: false,
+  },
+  destination_longitude: {
+    type: Number,
+    required: false,
+  },
   available_seats: {
     type: Number,
     required: true,
+  },
+  shortest_path: {
+    type: String,
+    required: false,
   },
 });
 

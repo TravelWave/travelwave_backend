@@ -6,7 +6,10 @@ interface RideInterface extends Document {
   number_of_passengers: number;
   latitude: number;
   longitude: number;
+  destination_latitude: number;
+  destination_longitude: number;
   available_seats: number;
+  shortest_path?: string;
 }
 
 export default RideInterface;
