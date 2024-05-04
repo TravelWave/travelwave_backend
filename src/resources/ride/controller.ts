@@ -10,7 +10,7 @@ const rideDAL = dataAccessLayer(RideSchema);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
 const invertedIndexPoolDAL = dataAccessLayer(InvertedIndexPool);
 
-function decodePolyline(encoded) {
+function decodePolyline(encoded: string) {
   const poly = [];
   let index = 0;
   let lat = 0;
@@ -44,7 +44,7 @@ function decodePolyline(encoded) {
   return poly;
 }
 
-async function fetchRoute(origin, destination) {
+async function fetchRoute(origin: number[], destination: number[]) {
   const response = await fetch(
     `https://graphhopper.com/api/1/route?point=${origin[0]},${origin[1]}&point=${destination[0]},${destination[1]}&key=${process.env.GRAPH_HOPPER_API_KEY}`
   );
