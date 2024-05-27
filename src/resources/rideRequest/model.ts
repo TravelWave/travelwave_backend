@@ -38,6 +38,17 @@ const RideRequestSchema = new Schema({
     type: String,
     required: true,
   },
+  is_pooled: {
+    type: Boolean,
+    required: true,
+  },
+  is_scheduled: {
+    type: Boolean,
+    required: true,
+  },
+  scheduled_time: {
+    type: Date,
+  },
 });
 
 RideRequestSchema.set("toJSON", { virtuals: true });

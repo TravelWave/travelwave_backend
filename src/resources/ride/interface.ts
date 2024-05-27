@@ -10,6 +10,8 @@ interface RideInterface extends Document {
   destination_longitude: number;
   available_seats: number;
   shortest_path?: string;
+  is_pooled: boolean;
+  is_scheduled: boolean;
 }
 
 export default RideInterface;
