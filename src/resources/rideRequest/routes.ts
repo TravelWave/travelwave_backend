@@ -33,8 +33,18 @@ router.get(
   auth,
   rideRequestController.getScheduledPooledRideRequests
 );
+router.get(
+  "/accepted/scheduled",
+  auth,
+  rideRequestController.getAcceptedScheduledRideRequests
+);
 router.get("/:id", auth, rideRequestController.getRideRequest);
 router.delete("/:id", auth, rideRequestController.cancelRideRequest);
-router.put("/:id/accept", auth, rideRequestController.acceptRideRequest);
+router.put("/:id/accept", auth, rideRequestController.acceptOneRideRequest);
+router.put(
+  "/:id/accept/scheduled",
+  auth,
+  rideRequestController.acceptOneScheduledRideRequest
+);
 
 export default router;
