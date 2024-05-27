@@ -4,6 +4,7 @@ import RideRequestInterface from "./interface";
 import VehicleSchema from "../vehicles/model";
 import RideSchema from "../ride/model";
 import dataAccessLayer from "../../common/dal";
+import db from "../../services/db";
 import {
   findNearbyDrivers,
   calculateETA,
@@ -75,6 +76,103 @@ async function createRideRequestHelper(
     res.status(400).json({ message: error.message });
   }
 }
+
+const processOneRideRequest = async (
+  req: Request,
+  res: Response,
+  scheduled: boolean
+) => {
+  const session = await db.Connection.startSession();
+  session.startTransaction();
+
+  try {
+    const id = req.params.id;
+    const driverId = req.user._id;
+
+    // Fetch rideRequest and car data in parallel
+    const [rideRequest, car] = await Promise.all([
+      rideRequestDAL.getOnePopulated({ _id: id }),
+      vehicleDAL.getOnePopulated({ driver: driverId }),
+    ]);
+
+    if (!rideRequest || rideRequest.status !== "pending") {
+      await session.abortTransaction();
+      session.endSession();
+      return res
+        .status(404)
+        .json({ message: "Ride request not found or not in pending state" });
+    }
+
+    if (!car) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Driver not found" });
+    }
+
+    const carInfo = scheduled
+      ? `A ${car.name}, ${car.make} ${car.model} color ${car.color} with license plate ${car.license_plate} will pick you up at ${rideRequest.scheduled_time}.`
+      : `A ${car.name}, ${car.make} ${car.model} color ${car.color} with license plate ${car.license_plate} is on the way to pick you up.`;
+
+    const ride = await rideDAL.getOnePopulated({ vehicle: car._id });
+
+    if (!ride) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Ride not found" });
+    }
+
+    const driverLocation = [ride.latitude, ride.longitude];
+
+    // Fetch passenger's location
+    const passenger = await rideRequestDAL.getOne({ _id: id });
+    if (!passenger) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Passenger not found" });
+    }
+
+    const passengerLocation = [
+      passenger.start_latitude,
+      passenger.start_longitude,
+    ];
+
+    // Calculate ETA and fare in parallel
+    const [eta, fare] = await Promise.all([
+      calculateETA(driverLocation, passengerLocation),
+      oneRideFarePriceCalculator(rideRequest.shortest_path),
+    ]);
+
+    // Send notification to the user
+    await sendRideRequestAcceptedNotification(
+      rideRequest.passenger,
+      `${carInfo} ETA: ${eta}`,
+      fare
+    );
+
+    // Update the ride and ride request within the transaction
+    ride.number_of_passengers += 1;
+    ride.available_seats -= 1;
+    ride.destination_latitude = passenger.end_latitude;
+    ride.destination_longitude = passenger.end_longitude;
+    ride.shortest_path = rideRequest.shortest_path;
+
+    await rideDAL.updateOne(ride, ride._id);
+
+    rideRequest.status = "accepted";
+    rideRequest.driver = driverId;
+
+    const updatedRideRequest = await rideRequestDAL.updateOne(rideRequest, id);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json(updatedRideRequest);
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    res.status(500).json({ message: error.message });
+  }
+};
 
 export const createOneRideRequest = (req: Request, res: Response) => {
   createRideRequestHelper(req, res, false, false);
@@ -161,68 +259,30 @@ export const cancelRideRequest = async (req: Request, res: Response) => {
   }
 };
 
-export const acceptRideRequest = async (req: Request, res: Response) => {
+export const getAcceptedScheduledRideRequests = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    const id = req.params.id;
-    const driverId = req.user._id;
-
-    const rideRequest = await rideRequestDAL.getOnePopulated({ _id: id });
-
-    if (!rideRequest || rideRequest.status !== "pending") {
-      return res
-        .status(404)
-        .json({ message: "Ride request not found or not in pending state" });
-    }
-
-    rideRequest.status = "accepted";
-    rideRequest.driver = driverId;
-
-    const updatedRideRequest = await rideRequestDAL.updateOne(rideRequest, id);
-
-    // Get the driver's location
-    const car = await vehicleDAL.getOnePopulated({ driver: driverId });
-    const carInfo = `A ${car.name}, ${car.make} ${car.model} color ${car.color} with license plate ${car.license_plate} is on the way to pick you up.`;
-
-    const ride = await rideDAL.getOnePopulated({ vehicle: car._id });
-
-    const driverLocation = [ride.latitude, ride.longitude];
-
-    // Get the passenger's location
-    const passenger = await rideRequestDAL.getOne({ _id: id });
-    const passengerLocation = [
-      passenger.start_latitude,
-      passenger.start_longitude,
-    ];
-
-    console.log("Driver Location", driverLocation);
-    console.log("Passenger Location", passengerLocation);
-
-    // Calculate the ETA
-    const eta = await calculateETA(driverLocation, passengerLocation);
-
-    // calculate the fare price
-    const fare = oneRideFarePriceCalculator(rideRequest.shortest_path);
-
-    // Send notification to the user
-    await sendRideRequestAcceptedNotification(
-      rideRequest.passenger,
-      `${carInfo} ETA: ${eta}`,
-      fare
-    );
-
-    // update the ride
-    ride.number_of_passengers += 1;
-    ride.available_seats -= 1;
-    ride.destination_latitude = passenger.end_latitude;
-    ride.destination_longitude = passenger.end_longitude;
-    ride.shortest_path = rideRequest.shortest_path;
-
-    await rideDAL.updateOne(ride, ride._id);
-
-    res.status(200).json(updatedRideRequest);
+    const rideRequests = await rideRequestDAL.getAllPopulated({
+      is_scheduled: true,
+      status: "accepted",
+    });
+    res.status(200).json(rideRequests);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(404).json({ message: error.message });
   }
+};
+
+export const acceptOneRideRequest = async (req: Request, res: Response) => {
+  processOneRideRequest(req, res, false);
+};
+
+export const acceptOneScheduledRideRequest = async (
+  req: Request,
+  res: Response
+) => {
+  processOneRideRequest(req, res, true);
 };
 
 export default {
@@ -235,6 +295,8 @@ export default {
   getPooledRideRequests,
   getScheduledRideRequests,
   getScheduledPooledRideRequests,
+  getAcceptedScheduledRideRequests,
   cancelRideRequest,
-  acceptRideRequest,
+  acceptOneRideRequest,
+  acceptOneScheduledRideRequest,
 };
