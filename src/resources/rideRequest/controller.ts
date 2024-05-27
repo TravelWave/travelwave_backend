@@ -30,42 +30,69 @@ async function fetchRoute(origin: number[], destination: number[]) {
   return null;
 }
 
-export const createRideRequest = async (req: Request, res: Response) => {
+async function createRideRequestHelper(
+  req: Request,
+  res: Response,
+  isScheduled: boolean,
+  isPooled: boolean
+) {
   try {
     const rideRequest: RideRequestInterface = req.body;
     const user = req.user;
 
-    const id = user._id;
+    rideRequest.passenger = user._id;
+    rideRequest.request_time = new Date();
+    rideRequest.is_scheduled = isScheduled;
+    rideRequest.is_pooled = isPooled;
 
-    rideRequest.passenger = id;
+    if (isScheduled) {
+      rideRequest.scheduled_time = new Date(rideRequest.scheduled_time);
+    }
 
     const origin = [rideRequest.start_latitude, rideRequest.start_longitude];
     const destination = [rideRequest.end_latitude, rideRequest.end_longitude];
 
     const shortestPath = await fetchRoute(origin, destination);
-
     if (!shortestPath) {
       throw new Error("No path found");
     }
 
     rideRequest.shortest_path = shortestPath;
-
     rideRequest.status = "pending";
 
     const createdRideRequest = await rideRequestDAL.createOne(rideRequest);
 
     const nearbyDrivers = await findNearbyDrivers(origin);
-
     for (const driver of nearbyDrivers) {
       await sendRideRequestNotification(
         driver,
         `New ride request from ${user.full_name}`
       );
     }
+
     res.status(201).json(createdRideRequest);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
+}
+
+export const createOneRideRequest = (req: Request, res: Response) => {
+  createRideRequestHelper(req, res, false, false);
+};
+
+export const createOneScheduledRideRequest = (req: Request, res: Response) => {
+  createRideRequestHelper(req, res, true, false);
+};
+
+export const createPooledRideRequest = (req: Request, res: Response) => {
+  createRideRequestHelper(req, res, false, true);
+};
+
+export const createPooledScheduledRideRequest = (
+  req: Request,
+  res: Response
+) => {
+  createRideRequestHelper(req, res, true, true);
 };
 
 export const getRideRequests = async (req: Request, res: Response) => {
@@ -82,6 +109,43 @@ export const getRideRequest = async (req: Request, res: Response) => {
     const id = req.params.id;
     const rideRequest = await rideRequestDAL.getOne({ _id: id });
     res.status(200).json(rideRequest);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const getPooledRideRequests = async (req: Request, res: Response) => {
+  try {
+    const rideRequests = await rideRequestDAL.getAllPopulated({
+      is_pooled: true,
+    });
+    res.status(200).json(rideRequests);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const getScheduledRideRequests = async (req: Request, res: Response) => {
+  try {
+    const rideRequests = await rideRequestDAL.getAllPopulated({
+      is_scheduled: true,
+    });
+    res.status(200).json(rideRequests);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const getScheduledPooledRideRequests = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const rideRequests = await rideRequestDAL.getAllPopulated({
+      is_scheduled: true,
+      is_pooled: true,
+    });
+    res.status(200).json(rideRequests);
   } catch (error) {
     res.status(404).json({ message: error.message });
   }
@@ -162,9 +226,15 @@ export const acceptRideRequest = async (req: Request, res: Response) => {
 };
 
 export default {
-  createRideRequest,
+  createOneRideRequest,
+  createOneScheduledRideRequest,
+  createPooledRideRequest,
+  createPooledScheduledRideRequest,
   getRideRequests,
   getRideRequest,
+  getPooledRideRequests,
+  getScheduledRideRequests,
+  getScheduledPooledRideRequests,
   cancelRideRequest,
   acceptRideRequest,
 };

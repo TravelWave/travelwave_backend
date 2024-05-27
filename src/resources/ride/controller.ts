@@ -56,20 +56,28 @@ async function fetchRoute(origin: number[], destination: number[]) {
   return null;
 }
 
-export const createRide = async (req: Request, res: Response) => {
+async function getVehicleForUser(userId: string) {
+  const vehicle = await vehicleDAL.getOnePopulated({ driver: userId });
+  if (!vehicle) {
+    throw new Error("Vehicle not found");
+  }
+  return vehicle;
+}
+
+async function createRide(
+  req: Request,
+  res: Response,
+  isScheduled: boolean,
+  isPooled: boolean
+) {
   try {
     const ride: RideInterface = req.body;
     const user = req.user;
-
-    const id = user._id;
-
-    const vehicle = await vehicleDAL.getOnePopulated({ driver: id });
-
-    if (!vehicle) {
-      throw new Error("Vehicle not found");
-    }
+    const vehicle = await getVehicleForUser(user._id);
 
     ride.vehicle = vehicle.id;
+    ride.is_scheduled = isScheduled;
+    ride.is_pooled = isPooled;
 
     // Fetch route from graphhopper
     const origin = [ride.latitude, ride.longitude];
@@ -77,20 +85,18 @@ export const createRide = async (req: Request, res: Response) => {
     const shortest_path = await fetchRoute(origin, destination);
     ride.shortest_path = shortest_path;
 
-    var nodes = [];
-
+    let nodes = [];
     if (ride.shortest_path) {
       nodes = decodePolyline(ride.shortest_path);
     } else {
       nodes = [[ride.latitude, ride.longitude]];
     }
-    const createdRide = await rideDAL.createOne(ride);
 
+    const createdRide = await rideDAL.createOne(ride);
     logger.info("Ride created successfully");
 
-    // get ride by id
+    // Get ride by id
     const ridev2 = await rideDAL.getOne({ _id: createdRide._id });
-
     console.log("ride", ridev2._id);
 
     const invertedIndexPool = {
@@ -99,13 +105,28 @@ export const createRide = async (req: Request, res: Response) => {
     };
 
     await invertedIndexPoolDAL.createOne(invertedIndexPool);
-
     logger.info("Inverted Index Pool created successfully");
 
     res.status(201).json(createdRide);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
+}
+
+export const createOneRide = (req: Request, res: Response) => {
+  createRide(req, res, false, false);
+};
+
+export const createOneScheduledRide = (req: Request, res: Response) => {
+  createRide(req, res, true, false);
+};
+
+export const createPooledRide = (req: Request, res: Response) => {
+  createRide(req, res, false, true);
+};
+
+export const createScheduledPooledRide = (req: Request, res: Response) => {
+  createRide(req, res, true, true);
 };
 
 export const getRides = async (req: Request, res: Response) => {
@@ -122,6 +143,37 @@ export const getRide = async (req: Request, res: Response) => {
     const id = req.params.id;
     const ride = await rideDAL.getOne({ _id: id });
     res.status(200).json(ride);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const getPooledRides = async (req: Request, res: Response) => {
+  console.log("getPooledRides");
+  try {
+    const rides = await rideDAL.getAllPopulated({ is_pooled: true });
+    res.status(200).json(rides);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const getScheduledRides = async (req: Request, res: Response) => {
+  try {
+    const rides = await rideDAL.getAllPopulated({ is_scheduled: true });
+    res.status(200).json(rides);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const getScheduledPooledRides = async (req: Request, res: Response) => {
+  try {
+    const rides = await rideDAL.getAllPopulated({
+      is_scheduled: true,
+      is_pooled: true,
+    });
+    res.status(200).json(rides);
   } catch (error) {
     res.status(404).json({ message: error.message });
   }
@@ -148,9 +200,15 @@ export const deleteRide = async (req: Request, res: Response) => {
 };
 
 export default {
-  createRide,
+  createOneRide,
+  createOneScheduledRide,
+  createPooledRide,
+  createScheduledPooledRide,
   getRides,
   getRide,
+  getPooledRides,
+  getScheduledRides,
+  getScheduledPooledRides,
   updateRide,
   deleteRide,
 };
