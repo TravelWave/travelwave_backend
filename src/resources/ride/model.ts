@@ -7,6 +7,17 @@ const RideSchema = new Schema({
     ref: "Vehicle",
     required: true,
   },
+  driver: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  passengers: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
   number_of_passengers: {
     type: Number,
     required: true,
@@ -24,6 +35,14 @@ const RideSchema = new Schema({
     required: false,
   },
   destination_longitude: {
+    type: Number,
+    required: false,
+  },
+  current_location_latitude: {
+    type: Number,
+    required: false,
+  },
+  current_location_longitude: {
     type: Number,
     required: false,
   },

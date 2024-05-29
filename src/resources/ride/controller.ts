@@ -79,6 +79,12 @@ async function createRide(
     ride.is_scheduled = isScheduled;
     ride.is_pooled = isPooled;
 
+    // get the driver
+    ride.driver = user._id;
+
+    ride.current_location_latitude = ride.latitude;
+    ride.current_location_longitude = ride.longitude;
+
     // Fetch route from graphhopper
     const origin = [ride.latitude, ride.longitude];
     const destination = [ride.destination_latitude, ride.destination_longitude];
