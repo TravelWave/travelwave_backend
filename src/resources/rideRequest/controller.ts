@@ -131,6 +131,25 @@ const processOneRideRequest = async (
       return res.status(404).json({ message: "Passenger not found" });
     }
 
+    console.log(ride.passengers, rideRequest.passenger);
+
+    // check if the passanger is already in the ride
+    if (ride.passengers.includes(rideRequest.passenger)) {
+      await session.abortTransaction();
+      session.endSession();
+      return res
+        .status(400)
+        .json({ message: "Passenger is already in the ride" });
+    }
+
+    // check if the ride has available seats
+    if (ride.available_seats === 0) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: "No available seats" });
+    }
+    ride.passengers.push(rideRequest.passenger);
+
     const passengerLocation = [
       passenger.start_latitude,
       passenger.start_longitude,
