@@ -47,4 +47,15 @@ router.put(
   rideRequestController.acceptOneScheduledRideRequest
 );
 
+router.post(
+  "/ask-to-join/:id",
+  auth,
+  rideRequestController.askToJoinPooledRide
+);
+
+router.post(
+  "/accept-join-request/",
+  auth,
+  rideRequestController.acceptPooledRideRequest
+);
 export default router;
