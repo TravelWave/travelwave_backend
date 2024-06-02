@@ -14,6 +14,11 @@ import {
   sendRideRequestAcceptedNotification,
 } from "../../services/notificationService";
 import { oneRideFarePriceCalculator } from "../../services/priceCalculationService";
+import {
+  checkDirection,
+  decodePolyline,
+  calculateDetourDistance,
+} from "../../services/rideShareUtils";
 
 const rideRequestDAL = dataAccessLayer(RideRequest);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
@@ -120,6 +125,8 @@ const processOneRideRequest = async (
       session.endSession();
       return res.status(404).json({ message: "Ride not found" });
     }
+
+    console.log(ride);
 
     const driverLocation = [ride.latitude, ride.longitude];
 
@@ -304,6 +311,116 @@ export const acceptOneScheduledRideRequest = async (
   processOneRideRequest(req, res, true);
 };
 
+export const askToJoinPooledRide = async (req: Request, res: Response) => {
+  try {
+    const rideId = req.params.id;
+
+    // Fetch the ride details
+    const ride = await rideDAL.getOnePopulated({ _id: rideId });
+
+    if (!ride) {
+      return res.status(404).json({ message: "Ride not found" });
+    }
+
+    const passengerRequest = req.body;
+
+    const newPassengerStartLocation = [
+      passengerRequest.start_latitude,
+      passengerRequest.start_longitude,
+    ];
+    const newPassengerEndLocation = [
+      passengerRequest.end_latitude,
+      passengerRequest.end_longitude,
+    ];
+
+    const existingRoute = decodePolyline(ride.shortest_path);
+    const isSameDirection = checkDirection(
+      existingRoute,
+      newPassengerStartLocation,
+      newPassengerEndLocation
+    );
+
+    if (!isSameDirection) {
+      return res
+        .status(400)
+        .json({ message: "The ride is not in the same direction" });
+    }
+
+    // check for remaining seats
+    if (ride.available_seats === 0) {
+      return res.status(400).json({ message: "No available seats" });
+    }
+
+    // Calculate the detour distance for the driver
+    const detourDistance = await calculateDetourDistance(
+      existingRoute,
+      newPassengerStartLocation,
+      newPassengerEndLocation
+    );
+
+    // Send a notification to the driver about the new join request
+    await sendRideRequestNotification(
+      ride.driver,
+      `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`
+    );
+
+    res.status(200).json({
+      message: "Join request sent to the driver",
+      detourDistance: detourDistance,
+      rideId: rideId,
+      passengerId: req.user._id,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// a function for accepting a passanger to join the pooled ride
+export const acceptPooledRideRequest = async (req: Request, res: Response) => {
+  const session = await db.Connection.startSession();
+  session.startTransaction();
+
+  try {
+    const data = req.body;
+
+    const rideId = data.rideId;
+    const passengerId = data.passengerId;
+
+    console.log(rideId, passengerId);
+
+    // Fetch the ride details
+    const ride = await rideDAL.getOnePopulated({ _id: rideId });
+
+    if (!ride) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Ride not found" });
+    }
+
+    // check if the passanger is already in the ride
+    if (ride.passengers.includes(passengerId)) {
+      await session.abortTransaction();
+      session.endSession();
+      return res
+        .status(400)
+        .json({ message: "Passenger is already in the ride" });
+    }
+
+    ride.passengers.push(passengerId);
+
+    await rideDAL.updateOne(ride, ride._id);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({ message: "Passenger added to the ride" });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export default {
   createOneRideRequest,
   createOneScheduledRideRequest,
@@ -318,4 +435,6 @@ export default {
   cancelRideRequest,
   acceptOneRideRequest,
   acceptOneScheduledRideRequest,
+  acceptPooledRideRequest,
+  askToJoinPooledRide,
 };

@@ -36,7 +36,7 @@ async function fetchRoute(origin: number[], destination: number[]) {
   return null;
 }
 
-function decodePolyline(encoded: string) {
+export function decodePolyline(encoded: string) {
   const poly = [];
   let index = 0;
   let lat = 0;
@@ -88,19 +88,22 @@ function findClosestNode(nodeSet: number[][], targetNode: number[]) {
 }
 
 // Function to check direction
-function checkDirection(
-  route: number[][],
-  depNode: number[],
-  destNode: number[]
-) {
-  const depIndex = route.findIndex(
-    (node) => node[0] === depNode[0] && node[1] === depNode[1]
-  );
-  const destIndex = route.findIndex(
-    (node) => node[0] === destNode[0] && node[1] === destNode[1]
-  );
-  return depIndex !== -1 && destIndex !== -1 && depIndex < destIndex;
-}
+// export function checkDirection(
+//   route: number[][],
+//   depNode: number[],
+//   destNode: number[]
+// ) {
+//   console.log(route);
+//   const depIndex = route.findIndex(
+//     (node) => node[0] === depNode[0] && node[1] === depNode[1]
+//   );
+//   console.log("Dep", depIndex);
+//   const destIndex = route.findIndex(
+//     (node) => node[0] === destNode[0] && node[1] === destNode[1]
+//   );
+//   console.log("Dest", destIndex);
+//   return depIndex !== -1 && destIndex !== -1 && depIndex < destIndex;
+// }
 
 function calculateFare(distance: number, perKmRate: number) {
   // round off the distance to the nearest integer
@@ -274,4 +277,111 @@ export async function matchAllRideRequestsWithFare(
   });
 
   return allMatchedOffers;
+}
+
+async function getRouteDistance(start: number[], end: number[]) {
+  const [startLat, startLng] = start;
+  const [endLat, endLng] = end;
+
+  const response = await fetch(
+    `https://graphhopper.com/api/1/route?point=${startLat},${startLng}&point=${endLat},${endLng}&vehicle=car&key=${process.env.GRAPH_HOPPER_API_KEY}`
+  );
+
+  const data = await response.json();
+
+  if (data.paths && data.paths.length > 0) {
+    const distance = data.paths[0].distance; // distance in meters
+    return distance / 1000; // convert to kilometers
+  }
+
+  throw new Error("Unable to calculate route distance");
+}
+
+export async function calculateDetourDistance(
+  existingRoute: number[][],
+  startLocation: number[],
+  endLocation: number[]
+) {
+  const [driverStartLat, driverStartLng] = existingRoute[0]; // Starting point of the existing route
+  const [driverEndLat, driverEndLng] = existingRoute[existingRoute.length - 1]; // Ending point of the existing route
+
+  // Calculate the original route distance
+  const originalRouteDistance = await getRouteDistance(
+    [driverStartLat, driverStartLng],
+    [driverEndLat, driverEndLng]
+  );
+
+  // Calculate the detour route distances
+  const detourToPickupDistance = await getRouteDistance(
+    [driverStartLat, driverStartLng],
+    startLocation
+  );
+  const pickupToDropoffDistance = await getRouteDistance(
+    startLocation,
+    endLocation
+  );
+  const dropoffToEndDistance = await getRouteDistance(endLocation, [
+    driverEndLat,
+    driverEndLng,
+  ]);
+
+  // Calculate the total detour distance
+  const totalDetourDistance =
+    detourToPickupDistance + pickupToDropoffDistance + dropoffToEndDistance;
+
+  // Calculate the additional distance caused by the detour
+  const detourDistance = totalDetourDistance - originalRouteDistance;
+
+  return detourDistance;
+}
+
+function toRadians(degrees: number) {
+  return degrees * (Math.PI / 180);
+}
+
+function calculateBearing(start: number[], end: number[]) {
+  const [startLat, startLng] = start.map(toRadians);
+  const [endLat, endLng] = end.map(toRadians);
+
+  const dLng = endLng - startLng;
+  const y = Math.sin(dLng) * Math.cos(endLat);
+  const x =
+    Math.cos(startLat) * Math.sin(endLat) -
+    Math.sin(startLat) * Math.cos(endLat) * Math.cos(dLng);
+  const bearing = Math.atan2(y, x);
+
+  return (bearing * 180) / Math.PI; // Convert radians to degrees
+}
+
+function calculateAngleDifference(angle1: number, angle2: number) {
+  let diff = Math.abs(angle1 - angle2);
+  if (diff > 180) {
+    diff = 360 - diff;
+  }
+  return diff;
+}
+
+export async function checkDirection(
+  existingRoute: number[][],
+  startLocation: number[],
+  endLocation: number[]
+) {
+  const [existingStart, existingEnd] = [
+    existingRoute[0],
+    existingRoute[existingRoute.length - 1],
+  ];
+
+  // Calculate bearings for the existing route and new passenger's route
+  const existingBearing = calculateBearing(existingStart, existingEnd);
+  const newPassengerBearing = calculateBearing(startLocation, endLocation);
+
+  // Calculate the difference in bearings
+  const angleDifference = calculateAngleDifference(
+    existingBearing,
+    newPassengerBearing
+  );
+
+  // If the angle difference is within a certain threshold, consider it the same direction
+  const threshold = 45; // Example threshold in degrees, can be adjusted
+  return angleDifference <= threshold;
 }
