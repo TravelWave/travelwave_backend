@@ -9,7 +9,7 @@ function calculatePrice(distance: number): number {
   return distance * 10;
 }
 
-function calculateDistance(path: number[][]): number {
+export function calculateDistance(path: number[][]): number {
   let distance = 0;
   for (let i = 0; i < path.length - 1; i++) {
     const [lat1, lon1] = path[i];

@@ -19,6 +19,7 @@ import {
   decodePolyline,
   calculateDetourDistance,
 } from "../../services/rideShareUtils";
+import { calculateDistance } from "../../services/priceCalculationService";
 
 const rideRequestDAL = dataAccessLayer(RideRequest);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
@@ -358,6 +359,9 @@ export const askToJoinPooledRide = async (req: Request, res: Response) => {
       newPassengerEndLocation
     );
 
+    // calculate the total distance the user would travel if accepted in to the ride
+    const totalDistance = calculateDistance(existingRoute);
+
     // Send a notification to the driver about the new join request
     await sendRideRequestNotification(
       ride.driver,
@@ -369,6 +373,7 @@ export const askToJoinPooledRide = async (req: Request, res: Response) => {
       detourDistance: detourDistance,
       rideId: rideId,
       passengerId: req.user._id,
+      totalDistance: totalDistance,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -385,8 +390,7 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
 
     const rideId = data.rideId;
     const passengerId = data.passengerId;
-
-    console.log(rideId, passengerId);
+    const totalDistance = data.totalDistance;
 
     // Fetch the ride details
     const ride = await rideDAL.getOnePopulated({ _id: rideId });
@@ -407,7 +411,20 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
     }
 
     ride.passengers.push(passengerId);
+    ride.passengerDistances[passengerId] = totalDistance;
 
+    const totalRideDistance: any = Object.values(
+      ride.passengerDistances
+    ).reduce((acc: number, distance: number) => acc + distance, 0);
+
+    ride.passengerFares = {};
+
+    for (const [id, dist] of Object.entries(ride.passengerDistances)) {
+      const passengerDistance: any = dist;
+      const rideDistance: number = totalRideDistance;
+      ride.passengerFares[id] =
+        (passengerDistance / rideDistance) * ride.totalPrice;
+    }
     await rideDAL.updateOne(ride, ride._id);
 
     await session.commitTransaction();
