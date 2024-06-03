@@ -9,6 +9,7 @@ import rideHistoryRouter from "../resources/rideHistory/routes";
 import feedbackRouter from "../resources/feedback/routes";
 import rideRequestRouter from "../resources/rideRequest/routes";
 import messagesRoutes from "../resources/chat/routes";
+import creditsRouter from "../resources/credits/routes";
 
 router.use("/users", userRouter);
 router.use("/vehicles", vehicleRouter);
@@ -17,5 +18,6 @@ router.use("/ride-histories", rideHistoryRouter);
 router.use("/feedbacks", feedbackRouter);
 router.use("/ride-requests", rideRequestRouter);
 router.use("/messages", messagesRoutes);
+router.use("/credits", creditsRouter);
 
 export default router;

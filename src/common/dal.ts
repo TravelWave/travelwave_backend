@@ -1,20 +1,32 @@
 import { Model } from "mongoose";
+import _ from "lodash";
 import User from "../resources/users/interface";
 import logger from "./logger";
+
+// Helper function to sanitize inputs
+const sanitizeInput = (input: any) => {
+  return _.omit(input, ["__proto__", "constructor", "prototype"]);
+};
 
 const getOne =
   (model: Model<any, {}, {}>) =>
   async (props: any, populate_opts: any = "") => {
     logger.info(`Fetching ${model.modelName} with id: ${props._id}`);
-    return await model.findOne(props).populate(populate_opts).lean().exec();
+    const sanitizedProps = sanitizeInput(props);
+    return await model
+      .findOne(sanitizedProps)
+      .populate(populate_opts)
+      .lean()
+      .exec();
   };
 
 const getAll =
   (model: Model<any, {}, {}>) =>
   async (props: any, populate_opts: any = "") => {
     logger.info(`Fetching all ${model.modelName} with props: ${props}`);
+    const sanitizedProps = sanitizeInput(props);
     return await model
-      .find(props)
+      .find(sanitizedProps)
       .sort({ updated_at: -1 })
       .populate(populate_opts)
       .lean()
@@ -25,8 +37,9 @@ const getAllSecured =
   (model: Model<User, {}, {}>) =>
   async (props: any, args: any = "") => {
     logger.info(`Fetching all securely`);
+    const sanitizedProps = sanitizeInput(props);
     return await model
-      .find(props, "-password")
+      .find(sanitizedProps, "-password")
       .sort({ updated_at: -1 })
       .populate(args)
       .lean()
@@ -36,21 +49,22 @@ const getAllSecured =
 const createWithTransaction =
   (model: Model<any, {}, {}>) => async (props: any, SESSION: any) => {
     logger.info(`Creating ${model.modelName} with transaction`);
-    return await model.create([props], { session: SESSION });
+    const sanitizedProps = sanitizeInput(props);
+    return await model.create([sanitizedProps], { session: SESSION });
   };
 
 const createOne = (model: Model<any, {}, {}>) => async (props: any) => {
   logger.info(`Creating ${model.modelName}`);
-  return await model.create(props);
+  const sanitizedProps = sanitizeInput(props);
+  return await model.create(sanitizedProps);
 };
 
 const updateWithTransaction =
   (model: Model<any, {}, {}>) =>
   async (props: any, id: String, SESSION: any) => {
     logger.info(`Updating ${model.modelName} with id(ACID): ${id}`);
-
-    const payload = props;
-    return await model.findOneAndUpdate({ _id: id }, payload, {
+    const sanitizedProps = sanitizeInput(props);
+    return await model.findOneAndUpdate({ _id: id }, sanitizedProps, {
       new: true,
       session: SESSION,
     });
@@ -59,10 +73,9 @@ const updateWithTransaction =
 const updateOne =
   (model: Model<any, {}, {}>) => async (props: any, id: String) => {
     logger.info(`Updating ${model.modelName} with id: ${id}`);
-
-    const payload = props;
+    const sanitizedProps = sanitizeInput(props);
     return await model
-      .findOneAndUpdate({ _id: id }, payload, { new: true })
+      .findOneAndUpdate({ _id: id }, sanitizedProps, { new: true })
       .exec();
   };
 
@@ -70,18 +83,12 @@ const deleteOne =
   (model: Model<any, {}, {}>) =>
   async (id: any, permanentDelete: Boolean, props?: Object) => {
     logger.info(`Deleting ${model.modelName} with id: ${id}`);
+    const sanitizedProps = sanitizeInput(props || { _id: id });
     if (permanentDelete == true) {
-      if (typeof props == "undefined") props = { _id: id };
-
-      return await model.deleteOne(props);
+      return await model.deleteOne(sanitizedProps);
     }
     logger.info(`Soft deleting ${model.modelName} with id: ${id}`);
-    return await model.updateOne(
-      {
-        _id: id,
-      },
-      { $set: { is_active: false } }
-    );
+    return await model.updateOne({ _id: id }, { $set: { is_active: false } });
   };
 
 const getAllPopulated =
@@ -94,8 +101,9 @@ const getAllPopulated =
     args4: any = ""
   ) => {
     logger.info(`Fetching all ${model.modelName} with props: ${props}`);
-    requestedTests: return await model
-      .find(props)
+    const sanitizedProps = sanitizeInput(props);
+    return await model
+      .find(sanitizedProps)
       .sort({ updated_at: -1 })
       .populate(args1)
       .populate(args2)
@@ -114,8 +122,9 @@ const getOnePopulated =
     args4: any = ""
   ) => {
     logger.info(`Fetching all ${model.modelName} with props: ${props}`);
-    requestedTests: return await model
-      .findOne(props)
+    const sanitizedProps = sanitizeInput(props);
+    return await model
+      .findOne(sanitizedProps)
       .populate(args1)
       .populate(args2)
       .populate(args3)
@@ -126,7 +135,8 @@ const getOnePopulated =
 const aggregatedQuery =
   (model: Model<any, {}, {}>) => async (pipeline: any) => {
     logger.info(`Fetching all ${model.modelName} with props: ${pipeline}`);
-    return await model.aggregate(pipeline).exec();
+    const sanitizedPipeline = pipeline.map(sanitizeInput);
+    return await model.aggregate(sanitizedPipeline).exec();
   };
 
 const dataAccessLayer = (model: Model<any, {}, {}>) => ({

@@ -10,6 +10,11 @@ interface RideRequestInterface extends Document {
   request_time: Date;
   status: string;
   shortest_path: string;
+  is_pooled: boolean;
+  is_scheduled: boolean;
+  scheduled_time: Date;
+  passenger_distances: number[];
+  passenger_fares: number[];
 }
 
 export default RideRequestInterface;

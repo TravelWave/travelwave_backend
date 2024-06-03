@@ -7,6 +7,17 @@ const RideSchema = new Schema({
     ref: "Vehicle",
     required: true,
   },
+  driver: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  passengers: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
   number_of_passengers: {
     type: Number,
     required: true,
@@ -27,6 +38,14 @@ const RideSchema = new Schema({
     type: Number,
     required: false,
   },
+  current_location_latitude: {
+    type: Number,
+    required: false,
+  },
+  current_location_longitude: {
+    type: Number,
+    required: false,
+  },
   available_seats: {
     type: Number,
     required: true,
@@ -34,6 +53,14 @@ const RideSchema = new Schema({
   shortest_path: {
     type: String,
     required: false,
+  },
+  is_pooled: {
+    type: Boolean,
+    required: true,
+  },
+  is_scheduled: {
+    type: Boolean,
+    required: true,
   },
 });
 

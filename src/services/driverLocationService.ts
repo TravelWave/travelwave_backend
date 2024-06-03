@@ -72,9 +72,12 @@ export async function calculateETA(origin: number[], destination: number[]) {
     `https://graphhopper.com/api/1/route?point=${origin[0]},${origin[1]}&point=${destination[0]},${destination[1]}&key=${process.env.GRAPH_HOPPER_API_KEY}`
   );
   const data = await response.json();
+  console.log(data);
   if (data.paths && data.paths.length > 0) {
     const time = data.paths[0].time;
+    console.log(`ETA: ${time}`);
     const eta = convertTime(time);
+    console.log(`ETA converted: ${eta}`);
     return eta;
   }
   return null;

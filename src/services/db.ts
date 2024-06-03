@@ -3,6 +3,7 @@ import logger from "../common/logger";
 
 const DB_URI = process.env.MONGODB_URI;
 
+mongoose.set("strictQuery", true);
 mongoose.connect(DB_URI);
 
 mongoose.Promise = global.Promise;

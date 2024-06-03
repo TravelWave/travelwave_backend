@@ -43,6 +43,8 @@ export const registerUser = async (req: Request, res: Response) => {
         channel: "sms",
       });
 
+    console.log("Twilio response:", twilioResponse);
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await UserDAL.createOne({
@@ -74,7 +76,7 @@ const resendOTP = async (req: Request, res: Response) => {
 
     const phone_number = user.phone_number;
 
-    await twilioClient.verify.v2
+    const twilioResponse = await twilioClient.verify.v2
       .services(process.env.TWILIO_SERVICE_SID)
       .verifications.create({
         to: phone_number,
@@ -143,11 +145,20 @@ export const loginUser = async (req: Request, res: Response) => {
       throw new CustomError("Please verify your phone number", 400);
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    const payload = {
+      userId: user._id,
+      full_name: user.full_name,
+      phone_number: user.phone_number,
+      is_staff: user.is_staff,
+      is_driver: user.is_driver,
+      rating: user.rating,
+      is_active: user.is_active,
+      profile_picture: user.profile_picture,
+    };
 
-    // Save token to user
-    if (!user.token) user.token = token;
-    else user.token = token;
+    const token = jwt.sign(payload, process.env.JWT_SECRET);
+
+    user.token = token;
 
     await user.save();
 
