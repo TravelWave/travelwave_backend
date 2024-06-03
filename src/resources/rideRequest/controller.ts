@@ -438,6 +438,35 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
   }
 };
 
+export const paginatedRideRequests = async (req: Request, res: Response) => {
+  try {
+    const { page, limit } = req.query;
+
+    const pageNumber = parseInt(page as string, 10);
+    const limitNumber = parseInt(limit as string, 10);
+
+    const rides = await rideRequestDAL.getPaginated(
+      {},
+      { page: pageNumber, limit: limitNumber }
+    );
+
+    // with the paginated users also send the number of total users, passengers and drivers count
+    const totalRides = await rideRequestDAL.getMany({});
+    const totalPooled = await rideRequestDAL.getMany({ is_pooled: true });
+    const totalScheduled = await rideRequestDAL.getMany({ is_scheduled: true });
+
+    res.status(200).json({
+      rides,
+      total_ride_requests: totalRides.length,
+      total_pooled_ride_requests: totalPooled.length,
+      total_scheduled_ride_requests: totalScheduled.length,
+    });
+  } catch (error) {
+    console.error("Error paginating users:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export default {
   createOneRideRequest,
   createOneScheduledRideRequest,
@@ -454,4 +483,5 @@ export default {
   acceptOneScheduledRideRequest,
   acceptPooledRideRequest,
   askToJoinPooledRide,
+  paginatedRideRequests,
 };

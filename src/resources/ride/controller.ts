@@ -205,6 +205,35 @@ export const deleteRide = async (req: Request, res: Response) => {
   }
 };
 
+export const paginatedRides = async (req: Request, res: Response) => {
+  try {
+    const { page, limit } = req.query;
+
+    const pageNumber = parseInt(page as string, 10);
+    const limitNumber = parseInt(limit as string, 10);
+
+    const rides = await rideDAL.getPaginated(
+      {},
+      { page: pageNumber, limit: limitNumber }
+    );
+
+    // with the paginated users also send the number of total users, passengers and drivers count
+    const totalRides = await rideDAL.getMany({});
+    const totalPooled = await rideDAL.getMany({ is_pooled: true });
+    const totalScheduled = await rideDAL.getMany({ is_scheduled: true });
+
+    res.status(200).json({
+      rides,
+      total_rides: totalRides.length,
+      total_pooled_rides: totalPooled.length,
+      total_scheduled_rides: totalScheduled.length,
+    });
+  } catch (error) {
+    console.error("Error paginating users:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export default {
   createOneRide,
   createOneScheduledRide,
@@ -217,4 +246,5 @@ export default {
   getScheduledPooledRides,
   updateRide,
   deleteRide,
+  paginatedRides,
 };

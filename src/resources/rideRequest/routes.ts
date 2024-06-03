@@ -38,6 +38,10 @@ router.get(
   auth,
   rideRequestController.getAcceptedScheduledRideRequests
 );
+router.get(
+  "/paginated-ride-requests",
+  rideRequestController.paginatedRideRequests
+);
 router.get("/:id", auth, rideRequestController.getRideRequest);
 router.delete("/:id", auth, rideRequestController.cancelRideRequest);
 router.put("/:id/accept", auth, rideRequestController.acceptOneRideRequest);

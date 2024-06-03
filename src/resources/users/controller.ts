@@ -4,11 +4,17 @@ import jwt from "jsonwebtoken";
 import { CustomError } from "../../middlewares/utils/errorModel";
 import CustomUser from "./model";
 import CustomUserInterface from "./interface";
+import Credit from "../credits/model";
+import Feedback from "../feedback/model";
+import RideHistory from "../rideHistory/model";
 import dataAccessLayer from "../../common/dal";
 import db from "../../services/db";
 import twilio from "twilio";
 
 const UserDAL = dataAccessLayer(CustomUser);
+const CreditDAL = dataAccessLayer(Credit);
+const FeedbackDAL = dataAccessLayer(Feedback);
+const RideHistoryDAL = dataAccessLayer(RideHistory);
 
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -171,6 +177,51 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 };
 
+export const loginAdmin = async (req: Request, res: Response) => {
+  try {
+    const { phone_number, password } = req.body;
+
+    const user = await CustomUser.findOne({ phone_number });
+
+    if (!user) {
+      throw new CustomError("Invalid email or password", 400);
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      throw new CustomError("Invalid email or password", 400);
+    }
+
+    if (!user.is_staff) {
+      throw new CustomError("Unauthorized", 401);
+    }
+
+    const payload = {
+      userId: user._id,
+      full_name: user.full_name,
+      is_staff: user.is_staff,
+      is_driver: user.is_driver,
+      rating: user.rating,
+      is_active: user.is_active,
+      profile_picture: user.profile_picture,
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET);
+
+    user.token = token;
+
+    await user.save();
+
+    res.status(200).json({ token });
+  } catch (error) {
+    console.error("Error logging in admin:", error);
+    res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
 export const logoutUser = async (req: Request, res: Response) => {
   const session = await db.Connection.startSession();
   try {
@@ -276,6 +327,117 @@ export const getAllUsers = async (req: Request, res: Response) => {
   }
 };
 
+export const getAllPassengers = async (req: Request, res: Response) => {
+  try {
+    // Retrieve all users using UserDAL and pass the session
+    const users = await UserDAL.getAllPopulated({ is_driver: false });
+
+    console.log("Users:", users);
+
+    res.status(200).json(users);
+  } catch (error) {
+    // Abort the transaction if an error occurs
+    console.error("Error getting all passengers:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getAllDrivers = async (req: Request, res: Response) => {
+  try {
+    const users = await UserDAL.getAllPopulated({ is_driver: true });
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Error getting all drivers:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const searchUsers = async (req: Request, res: Response) => {
+  try {
+    const { query } = req.query;
+
+    console.log("Query:", query);
+    console.log("Params:", req.query);
+
+    const users = await UserDAL.getMany({
+      full_name: { $regex: query, $options: "i" },
+    });
+
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const paginatedUsers = async (req: Request, res: Response) => {
+  try {
+    const { page, limit } = req.query;
+
+    const pageNumber = parseInt(page as string, 10);
+    const limitNumber = parseInt(limit as string, 10);
+
+    const users = await UserDAL.getPaginated(
+      {},
+      { page: pageNumber, limit: limitNumber }
+    );
+
+    // with the paginated users also send the number of total users, passengers and drivers count
+    const totalUsers = await UserDAL.getMany({});
+    const totalPassengers = await UserDAL.getMany({ is_driver: false });
+    const totalDrivers = await UserDAL.getMany({ is_driver: true });
+
+    res.status(200).json({
+      users,
+      total_users: totalUsers.length,
+      total_passengers: totalPassengers.length,
+      total_drivers: totalDrivers.length,
+    });
+  } catch (error) {
+    console.error("Error paginating users:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getUserCredits = async (req: Request, res: Response) => {
+  try {
+    const user = req.user as CustomUserInterface;
+
+    const credits = await CreditDAL.getMany({ userId: user._id });
+
+    res.status(200).json(credits);
+  } catch (error) {
+    console.error("Error getting user credits:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getUserFeedbacks = async (req: Request, res: Response) => {
+  try {
+    const user = req.user as CustomUserInterface;
+
+    const feedbacks = await FeedbackDAL.getMany({ driver: user._id });
+
+    res.status(200).json(feedbacks);
+  } catch (error) {
+    console.error("Error getting user feedbacks:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getUserRideHistories = async (req: Request, res: Response) => {
+  try {
+    const user = req.user as CustomUserInterface;
+
+    const rideHistories = await RideHistoryDAL.getMany({ user: user._id });
+
+    res.status(200).json(rideHistories);
+  } catch (error) {
+    console.error("Error getting user ride histories:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export default {
   registerUser,
   loginUser,
@@ -286,4 +448,12 @@ export default {
   getAllUsers,
   resendOTP,
   verifyOTP,
+  getAllPassengers,
+  getAllDrivers,
+  searchUsers,
+  paginatedUsers,
+  getUserCredits,
+  getUserFeedbacks,
+  loginAdmin,
+  getUserRideHistories,
 };

@@ -139,6 +139,28 @@ const aggregatedQuery =
     return await model.aggregate(sanitizedPipeline).exec();
   };
 
+const getPaginated =
+  (model: Model<any, {}, {}>) =>
+  async (
+    props: any,
+    { page = 1, limit = 10 }: { page: number; limit: number },
+    populate_opts: any = ""
+  ) => {
+    logger.info(
+      `Fetching paginated ${model.modelName} with props: ${props}, page: ${page}, limit: ${limit}`
+    );
+    const sanitizedProps = sanitizeInput(props);
+    const skip = (page - 1) * limit;
+    return await model
+      .find(sanitizedProps)
+      .skip(skip)
+      .limit(limit)
+      .sort({ updated_at: -1 })
+      .populate(populate_opts)
+      .lean()
+      .exec();
+  };
+
 const dataAccessLayer = (model: Model<any, {}, {}>) => ({
   updateOne: updateOne(model),
   getMany: getAll(model),
@@ -152,6 +174,7 @@ const dataAccessLayer = (model: Model<any, {}, {}>) => ({
   getOnePopulated: getOnePopulated(model),
   aggregatedQuery: aggregatedQuery(model),
   getAll: getAll(model),
+  getPaginated: getPaginated(model),
 });
 
 export default dataAccessLayer;
