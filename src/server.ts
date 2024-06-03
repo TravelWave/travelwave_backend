@@ -4,7 +4,6 @@ import * as os from "os";
 import logger from "./common/logger";
 import { createServer } from "http";
 import { io } from "./socket";
-import chatController from "./resources/chat/controller";
 
 const PORT = process.env.PORT || 8000;
 
