@@ -21,6 +21,7 @@ router.get("/", auth, rideController.getRides);
 router.get("/pooled", auth, rideController.getPooledRides);
 router.get("/scheduled", auth, rideController.getScheduledRides);
 router.get("/scheduled/pooled", auth, rideController.getScheduledPooledRides);
+router.get("/paginated-rides", rideController.paginatedRides);
 router.get("/:id", auth, rideController.getRide);
 router.put("/:id", auth, rideController.updateRide);
 router.delete("/:id", auth, rideController.deleteRide);

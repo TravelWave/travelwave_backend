@@ -5,6 +5,16 @@ import { auth } from "../../middlewares/auth";
 
 const router = Router();
 
+router.route("/all-passengers").get(userController.getAllPassengers);
+router.route("/all-drivers").get(userController.getAllDrivers);
+router.route("/paginated-users").get(userController.paginatedUsers);
+router.route("/search-users").get(userController.searchUsers);
+router.route("/user-credits").get(auth, userController.getUserCredits);
+router.route("/user-feedbacks").get(auth, userController.getUserFeedbacks);
+router
+  .route("/user-ride-histories")
+  .get(auth, userController.getUserRideHistories);
+
 router
   .route("/")
   .get(userController.getAllUsers)
@@ -18,6 +28,7 @@ router
   .delete(auth, userController.deleteUserAccount);
 
 router.route("/login").post(userController.loginUser);
+router.route("/login-admin").post(userController.loginAdmin);
 router.route("/logout").post(auth, userController.logoutUser);
 
 router.route("/verify").post(userController.verifyOTP);
