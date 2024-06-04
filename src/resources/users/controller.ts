@@ -373,10 +373,11 @@ export const searchUsers = async (req: Request, res: Response) => {
 
 export const paginatedUsers = async (req: Request, res: Response) => {
   try {
-    const { page, limit } = req.query;
+    const { page, limit, type } = req.query;
 
     const pageNumber = parseInt(page as string, 10);
     const limitNumber = parseInt(limit as string, 10);
+    const userType = type as string;
 
     const users = await UserDAL.getPaginated(
       {},
@@ -384,13 +385,33 @@ export const paginatedUsers = async (req: Request, res: Response) => {
     );
 
     // with the paginated users also send the number of total users, passengers and drivers count
-    const totalUsers = await UserDAL.getMany({});
-    const totalPassengers = await UserDAL.getMany({ is_driver: false });
-    const totalDrivers = await UserDAL.getMany({ is_driver: true });
+    const totalUsers = users.length;
+    const totalPassengers = users.filter((user) => user.is_driver === false);
+    const totalDrivers = users.filter((user) => user.is_driver === true);
+
+    if (userType === "passenger") {
+      const passengers = users.filter((user) => user.is_driver === false);
+
+      return res.status(200).json({
+        passengers,
+        total_users: totalUsers,
+        total_passengers: totalPassengers.length,
+        total_drivers: totalDrivers.length,
+      });
+    } else if (userType === "driver") {
+      const drivers = users.filter((user) => user.is_driver === true);
+
+      return res.status(200).json({
+        drivers,
+        total_users: totalUsers,
+        total_passengers: totalPassengers.length,
+        total_drivers: totalDrivers.length,
+      });
+    }
 
     res.status(200).json({
       users,
-      total_users: totalUsers.length,
+      total_users: totalUsers,
       total_passengers: totalPassengers.length,
       total_drivers: totalDrivers.length,
     });

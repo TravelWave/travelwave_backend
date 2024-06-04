@@ -10,6 +10,7 @@ import feedbackRouter from "../resources/feedback/routes";
 import rideRequestRouter from "../resources/rideRequest/routes";
 import messagesRoutes from "../resources/chat/routes";
 import creditsRouter from "../resources/credits/routes";
+import adminRouter from "../resources/admin/routes";
 
 router.use("/users", userRouter);
 router.use("/vehicles", vehicleRouter);
@@ -19,5 +20,6 @@ router.use("/feedbacks", feedbackRouter);
 router.use("/ride-requests", rideRequestRouter);
 router.use("/messages", messagesRoutes);
 router.use("/credits", creditsRouter);
+router.use("/admin", adminRouter);
 
 export default router;

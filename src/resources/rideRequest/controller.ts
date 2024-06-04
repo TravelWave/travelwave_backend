@@ -20,6 +20,8 @@ import {
   calculateDetourDistance,
 } from "../../services/rideShareUtils";
 import { calculateDistance } from "../../services/priceCalculationService";
+import NodeCache from "node-cache";
+const cache = new NodeCache({ stdTTL: 600 });
 
 const rideRequestDAL = dataAccessLayer(RideRequest);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
@@ -440,29 +442,69 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
 
 export const paginatedRideRequests = async (req: Request, res: Response) => {
   try {
-    const { page, limit } = req.query;
+    const { page, limit, type } = req.query;
 
     const pageNumber = parseInt(page as string, 10);
     const limitNumber = parseInt(limit as string, 10);
+    const rideRequestType = type as string;
+
+    const cacheKey = `rides_${pageNumber}_${limitNumber}_${rideRequestType}`;
+
+    // Check if the response is cached
+    const cachedResponse = cache.get(cacheKey);
+    if (cachedResponse) {
+      return res.status(200).json(cachedResponse);
+    }
 
     const rides = await rideRequestDAL.getPaginated(
       {},
       { page: pageNumber, limit: limitNumber }
     );
 
-    // with the paginated users also send the number of total users, passengers and drivers count
-    const totalRides = await rideRequestDAL.getMany({});
-    const totalPooled = await rideRequestDAL.getMany({ is_pooled: true });
-    const totalScheduled = await rideRequestDAL.getMany({ is_scheduled: true });
+    // with the paginated ride requests also send the number of total ride requests, pooled ride requests, and scheduled ride requests count
+    const totalRideRequests = rides.length;
+    const totalPooledRideRequests = rides.filter(
+      (ride) => ride.is_pooled === true
+    );
+    const totalScheduledRideRequests = rides.filter(
+      (ride) => ride.is_scheduled === true
+    );
+
+    if (rideRequestType === "pooled") {
+      const pooledRideRequests = totalPooledRideRequests;
+
+      return res.status(200).json({
+        pooled_ride_requests: pooledRideRequests,
+        total_ride_requests: totalRideRequests,
+        total_pooled_ride_requests: totalPooledRideRequests.length,
+        total_scheduled_ride_requests: totalScheduledRideRequests.length,
+      });
+    } else if (rideRequestType === "scheduled") {
+      const scheduledRideRequests = totalScheduledRideRequests;
+
+      return res.status(200).json({
+        scheduled_ride_requests: scheduledRideRequests,
+        total_ride_requests: totalRideRequests,
+        total_pooled_ride_requests: totalPooledRideRequests.length,
+        total_scheduled_ride_requests: totalScheduledRideRequests.length,
+      });
+    }
+
+    cache.set(cacheKey, {
+      rides,
+      total_ride_requests: totalRideRequests,
+      total_pooled_ride_requests: totalPooledRideRequests.length,
+      total_scheduled_ride_requests: totalScheduledRideRequests.length,
+    });
 
     res.status(200).json({
       rides,
-      total_ride_requests: totalRides.length,
-      total_pooled_ride_requests: totalPooled.length,
-      total_scheduled_ride_requests: totalScheduled.length,
+      total_ride_requests: totalRideRequests,
+      total_pooled_ride_requests: totalPooledRideRequests.length,
+      total_scheduled_ride_requests: totalScheduledRideRequests.length,
     });
   } catch (error) {
-    console.error("Error paginating users:", error);
+    console.error("Error paginating ride requests:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
