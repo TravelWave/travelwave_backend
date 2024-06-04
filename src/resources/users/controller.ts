@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { CustomError } from "../../middlewares/utils/errorModel";
@@ -10,6 +10,7 @@ import RideHistory from "../rideHistory/model";
 import dataAccessLayer from "../../common/dal";
 import db from "../../services/db";
 import twilio from "twilio";
+import { streamUpload } from "../../services/bucket";
 
 const UserDAL = dataAccessLayer(CustomUser);
 const CreditDAL = dataAccessLayer(Credit);
@@ -438,6 +439,44 @@ export const getUserRideHistories = async (req: Request, res: Response) => {
   }
 };
 
+const uploadProfileImage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const currentUser = req.user._id;
+  const userId = req.params.id;
+  const file = req.file;
+
+  if (currentUser == userId) {
+    try {
+      // const resultURL = await cloudinaryUpload(file);
+      const resultURL = await streamUpload(req, "users");
+
+      console.log("Result URL:", resultURL);
+
+      if (resultURL) {
+        const data = await UserDAL.updateOne(
+          { profile_picture: resultURL },
+          userId
+        );
+
+        if (!data) {
+          return next(new CustomError("Cannot update User", 400));
+        }
+
+        res.status(200).json({ message: "Image upload successful", data });
+      } else {
+        res.status(400).json({ message: "Error uploading image to storage" });
+      }
+    } catch (error) {
+      next(new CustomError("There was an error uploading", 500));
+    }
+  } else {
+    res.status(401).json({ message: "Not authorized for this operation" });
+  }
+};
+
 export default {
   registerUser,
   loginUser,
@@ -456,4 +495,5 @@ export default {
   getUserFeedbacks,
   loginAdmin,
   getUserRideHistories,
+  uploadProfileImage,
 };

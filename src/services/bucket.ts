@@ -4,7 +4,7 @@ import fs from "fs";
 
 // upload image to cloudinary
 export const uploadImage = (image: any) => {
-  const folder = "facilities";
+  const folder = "users";
   return cloudinary.v2.uploader
     .upload(image, {
       use_filename: true,

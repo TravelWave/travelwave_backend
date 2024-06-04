@@ -1,3 +1,0 @@
-list peoples 
-destroy
-get chat controller

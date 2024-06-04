@@ -2,6 +2,7 @@ import { Router } from "express";
 import userController from "./controller";
 import { validateJoi, Schemas } from "../../middlewares/validate";
 import { auth } from "../../middlewares/auth";
+import { fileUpload } from "../../middlewares/upload-via-stream";
 
 const router = Router();
 
@@ -14,6 +15,10 @@ router.route("/user-feedbacks").get(auth, userController.getUserFeedbacks);
 router
   .route("/user-ride-histories")
   .get(auth, userController.getUserRideHistories);
+
+router
+  .route("/upload-image/:id")
+  .post(auth, fileUpload.single("file"), userController.uploadProfileImage);
 
 router
   .route("/")
