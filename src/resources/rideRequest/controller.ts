@@ -442,66 +442,46 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
 
 export const paginatedRideRequests = async (req: Request, res: Response) => {
   try {
-    const { page, limit, type } = req.query;
+    const { page, limit, type, search } = req.query;
 
     const pageNumber = parseInt(page as string, 10);
     const limitNumber = parseInt(limit as string, 10);
-    const rideRequestType = type as string;
+    const rideType = type as string;
+    const searchQuery = search as string;
 
-    const cacheKey = `rides_${pageNumber}_${limitNumber}_${rideRequestType}`;
-
-    // Check if the response is cached
-    const cachedResponse = cache.get(cacheKey);
-    if (cachedResponse) {
-      return res.status(200).json(cachedResponse);
+    // Define the filters based on the userType
+    const filters: any = {};
+    if (rideType === "pooled") {
+      filters.is_pooled = true;
+    } else if (rideType === "scheduled") {
+      filters.is_scheduled = true;
     }
 
-    const rides = await rideRequestDAL.getPaginated(
+    const rideRequests = await rideRequestDAL.getPaginated(
       {},
-      { page: pageNumber, limit: limitNumber }
+      {
+        page: pageNumber,
+        limit: limitNumber,
+        search: searchQuery,
+        searchFields: [],
+        filters,
+      }
     );
 
-    // with the paginated ride requests also send the number of total ride requests, pooled ride requests, and scheduled ride requests count
-    const totalRideRequests = rides.length;
-    const totalPooledRideRequests = rides.filter(
-      (ride) => ride.is_pooled === true
-    );
-    const totalScheduledRideRequests = rides.filter(
-      (ride) => ride.is_scheduled === true
-    );
-
-    if (rideRequestType === "pooled") {
-      const pooledRideRequests = totalPooledRideRequests;
-
-      return res.status(200).json({
-        pooled_ride_requests: pooledRideRequests,
-        total_ride_requests: totalRideRequests,
-        total_pooled_ride_requests: totalPooledRideRequests.length,
-        total_scheduled_ride_requests: totalScheduledRideRequests.length,
-      });
-    } else if (rideRequestType === "scheduled") {
-      const scheduledRideRequests = totalScheduledRideRequests;
-
-      return res.status(200).json({
-        scheduled_ride_requests: scheduledRideRequests,
-        total_ride_requests: totalRideRequests,
-        total_pooled_ride_requests: totalPooledRideRequests.length,
-        total_scheduled_ride_requests: totalScheduledRideRequests.length,
-      });
-    }
-
-    cache.set(cacheKey, {
-      rides,
-      total_ride_requests: totalRideRequests,
-      total_pooled_ride_requests: totalPooledRideRequests.length,
-      total_scheduled_ride_requests: totalScheduledRideRequests.length,
+    // Count total users, passengers, and drivers
+    const totalRides = await RideRequest.countDocuments({});
+    const totalPooled = await RideRequest.countDocuments({
+      is_pooled: true,
+    });
+    const totalScheduled = await RideRequest.countDocuments({
+      is_scheduled: true,
     });
 
     res.status(200).json({
-      rides,
-      total_ride_requests: totalRideRequests,
-      total_pooled_ride_requests: totalPooledRideRequests.length,
-      total_scheduled_ride_requests: totalScheduledRideRequests.length,
+      rideRequests,
+      total_ride_requests: totalRides,
+      total_pooled: totalPooled,
+      total_scheduled: totalScheduled,
     });
   } catch (error) {
     console.error("Error paginating ride requests:", error);

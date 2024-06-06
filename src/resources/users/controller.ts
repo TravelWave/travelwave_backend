@@ -23,34 +23,34 @@ const twilioClient = twilio(
 );
 
 export const registerUser = async (req: Request, res: Response) => {
-  const session = await db.Connection.startSession();
+  // const session = await db.Connection.startSession();
   try {
     const { full_name, phone_number, is_driver, password } = req.body;
 
-    session.startTransaction();
+    // session.startTransaction();
 
-    if (!full_name || !phone_number || !password) {
-      throw new CustomError("Please provide required fields", 400);
-    }
+    // if (!full_name || !phone_number || !password) {
+    //   throw new CustomError("Please provide required fields", 400);
+    // }
 
-    // Check if user exists
-    const userExists = await CustomUser.findOne({ phone_number });
+    // // Check if user exists
+    // const userExists = await CustomUser.findOne({ phone_number });
 
-    if (userExists) {
-      throw new CustomError("User already exists", 400);
-    }
+    // if (userExists) {
+    //   throw new CustomError("User already exists", 400);
+    // }
 
-    console.log("Phone number:", phone_number);
+    // console.log("Phone number:", phone_number);
 
-    // Generate OTP
-    const twilioResponse = await twilioClient.verify.v2
-      .services(process.env.TWILIO_SERVICE_SID)
-      .verifications.create({
-        to: phone_number,
-        channel: "sms",
-      });
+    // // Generate OTP
+    // const twilioResponse = await twilioClient.verify.v2
+    //   .services(process.env.TWILIO_SERVICE_SID)
+    //   .verifications.create({
+    //     to: phone_number,
+    //     channel: "sms",
+    //   });
 
-    console.log("Twilio response:", twilioResponse);
+    // console.log("Twilio response:", twilioResponse);
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -61,11 +61,11 @@ export const registerUser = async (req: Request, res: Response) => {
       password: hashedPassword,
     });
 
-    await session.commitTransaction();
+    // await session.commitTransaction();
     res.status(201).json(newUser);
-    await session.endSession();
+    // await session.endSession();
   } catch (error) {
-    await session.abortTransaction();
+    // await session.abortTransaction();
     console.error("Error registering user:", error);
     res.status(400).json({ error: "Error registering user" });
   }
@@ -373,47 +373,47 @@ export const searchUsers = async (req: Request, res: Response) => {
 
 export const paginatedUsers = async (req: Request, res: Response) => {
   try {
-    const { page, limit, type } = req.query;
+    const { page, limit, type, search } = req.query;
 
     const pageNumber = parseInt(page as string, 10);
     const limitNumber = parseInt(limit as string, 10);
+    const searchQuery = search as string;
     const userType = type as string;
+
+    // Define the fields to search on
+    const searchFields = ["full_name"];
+
+    // Define the filters based on the userType
+    const filters: any = {};
+    if (userType === "passenger") {
+      filters.is_driver = false;
+    } else if (userType === "driver") {
+      filters.is_driver = true;
+    }
 
     const users = await UserDAL.getPaginated(
       {},
-      { page: pageNumber, limit: limitNumber }
+      {
+        page: pageNumber,
+        limit: limitNumber,
+        search: searchQuery,
+        searchFields,
+        filters,
+      }
     );
 
-    // with the paginated users also send the number of total users, passengers and drivers count
-    const totalUsers = users.length;
-    const totalPassengers = users.filter((user) => user.is_driver === false);
-    const totalDrivers = users.filter((user) => user.is_driver === true);
-
-    if (userType === "passenger") {
-      const passengers = users.filter((user) => user.is_driver === false);
-
-      return res.status(200).json({
-        passengers,
-        total_users: totalUsers,
-        total_passengers: totalPassengers.length,
-        total_drivers: totalDrivers.length,
-      });
-    } else if (userType === "driver") {
-      const drivers = users.filter((user) => user.is_driver === true);
-
-      return res.status(200).json({
-        drivers,
-        total_users: totalUsers,
-        total_passengers: totalPassengers.length,
-        total_drivers: totalDrivers.length,
-      });
-    }
+    // Count total users, passengers, and drivers
+    const totalUsers = await CustomUser.countDocuments({});
+    const totalPassengers = await CustomUser.countDocuments({
+      is_driver: false,
+    });
+    const totalDrivers = await CustomUser.countDocuments({ is_driver: true });
 
     res.status(200).json({
       users,
       total_users: totalUsers,
-      total_passengers: totalPassengers.length,
-      total_drivers: totalDrivers.length,
+      total_passengers: totalPassengers,
+      total_drivers: totalDrivers,
     });
   } catch (error) {
     console.error("Error paginating users:", error);

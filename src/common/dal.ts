@@ -143,16 +143,42 @@ const getPaginated =
   (model: Model<any, {}, {}>) =>
   async (
     props: any,
-    { page = 1, limit = 10 }: { page: number; limit: number },
+    {
+      page = 1,
+      limit = 10,
+      search = "",
+      searchFields = [],
+      filters = {},
+    }: {
+      page: number;
+      limit: number;
+      search: string;
+      searchFields: string[];
+      filters: any;
+    },
     populate_opts: any = ""
   ) => {
-    logger.info(
-      `Fetching paginated ${model.modelName} with props: ${props}, page: ${page}, limit: ${limit}`
-    );
     const sanitizedProps = sanitizeInput(props);
     const skip = (page - 1) * limit;
+
+    // Create a search query based on the search parameter and search fields
+    const searchQuery =
+      search && searchFields.length > 0
+        ? {
+            $or: searchFields.map((field) => ({
+              [field]: { $regex: search, $options: "i" },
+            })),
+          }
+        : {};
+
+    // Create a filter query based on the filters parameter
+    const filterQuery = filters || {};
+
+    const query = { ...sanitizedProps, ...searchQuery, ...filterQuery };
+
+    logger.info(query);
     return await model
-      .find(sanitizedProps)
+      .find(query)
       .skip(skip)
       .limit(limit)
       .sort({ updated_at: -1 })

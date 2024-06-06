@@ -32,8 +32,8 @@ router
   .get(userController.getUserData)
   .delete(auth, userController.deleteUserAccount);
 
-router.route("/login").post(userController.loginUser);
 router.route("/login-admin").post(userController.loginAdmin);
+router.route("/login").post(userController.loginUser);
 router.route("/logout").post(auth, userController.logoutUser);
 
 router.route("/verify").post(userController.verifyOTP);

@@ -73,55 +73,46 @@ export const verifyVehicle = async (req: Request, res: Response) => {
 
 export const paginatedVehicles = async (req: Request, res: Response) => {
   try {
-    const { page, limit, type } = req.query;
+    const { page, limit, type, search } = req.query;
 
     const pageNumber = parseInt(page as string, 10);
     const limitNumber = parseInt(limit as string, 10);
-    const vehicleType = type as string;
+    const searchQuery = search as string;
+    const userType = type as string;
+
+    // Define the filters based on the userType
+    const filters: any = {};
+    if (userType === "verified") {
+      filters.is_verified = true;
+    } else if (userType === "unverified") {
+      filters.is_verified = false;
+    }
 
     const vehicles = await vehicleDAL.getPaginated(
       {},
-      { page: pageNumber, limit: limitNumber }
+      {
+        page: pageNumber,
+        limit: limitNumber,
+        search: searchQuery,
+        searchFields: [],
+        filters,
+      }
     );
 
-    // with the paginated vehicles also send the number of total vehicles, verified and unverified count
-    const totalVehicles = vehicles.length;
-    const totalVerified = vehicles.filter(
-      (vehicle) => vehicle.is_verified === true
-    );
-    const totalUnverified = vehicles.filter(
-      (vehicle) => vehicle.is_verified === false
-    );
-
-    if (vehicleType === "verified") {
-      const verifiedVehicles = vehicles.filter(
-        (vehicle) => vehicle.is_verified === true
-      );
-
-      return res.status(200).json({
-        verified_vehicles: verifiedVehicles,
-        total_vehicles: totalVehicles,
-        total_verified: totalVerified.length,
-        total_unverified: totalUnverified.length,
-      });
-    } else if (vehicleType === "unverified") {
-      const unverifiedVehicles = vehicles.filter(
-        (vehicle) => vehicle.is_verified === false
-      );
-
-      return res.status(200).json({
-        unverified_vehicles: unverifiedVehicles,
-        total_vehicles: totalVehicles,
-        total_verified: totalVerified.length,
-        total_unverified: totalUnverified.length,
-      });
-    }
+    // Count total users, passengers, and drivers
+    const totalUsers = await VehicleSchema.countDocuments({});
+    const totalUnverified = await VehicleSchema.countDocuments({
+      is_verified: false,
+    });
+    const totalVerified = await VehicleSchema.countDocuments({
+      is_verified: true,
+    });
 
     res.status(200).json({
       vehicles,
-      total_vehicles: totalVehicles,
-      total_verified: totalVerified.length,
-      total_unverified: totalUnverified.length,
+      total_users: totalUsers,
+      total_unverified: totalUnverified,
+      total_verified: totalVerified,
     });
   } catch (error) {
     console.error("Error paginating vehicles:", error);
