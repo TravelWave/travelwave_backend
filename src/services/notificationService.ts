@@ -10,12 +10,14 @@ io.on("connection", (socket) => {
 
 export async function sendRideRequestNotification(
   driver: any,
+  passenger: any,
   message: string
 ) {
   try {
     // Emit a new notification event
     io.emit("new notification", {
-      userId: driver._id,
+      driverId: driver._id,
+      passengerId: passenger,
       message: message,
     });
   } catch (error) {

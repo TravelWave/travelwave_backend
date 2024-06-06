@@ -75,6 +75,7 @@ async function createRideRequestHelper(
     for (const driver of nearbyDrivers) {
       await sendRideRequestNotification(
         driver,
+        user._id,
         `New ride request from ${user.full_name}`
       );
     }
@@ -318,6 +319,8 @@ export const askToJoinPooledRide = async (req: Request, res: Response) => {
   try {
     const rideId = req.params.id;
 
+    const user = req.user;
+
     // Fetch the ride details
     const ride = await rideDAL.getOnePopulated({ _id: rideId });
 
@@ -367,6 +370,7 @@ export const askToJoinPooledRide = async (req: Request, res: Response) => {
     // Send a notification to the driver about the new join request
     await sendRideRequestNotification(
       ride.driver,
+      user._id,
       `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`
     );
 
