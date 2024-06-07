@@ -25,7 +25,8 @@ const twilioClient = twilio(
 export const registerUser = async (req: Request, res: Response) => {
   const session = await db.Connection.startSession();
   try {
-    const { full_name, phone_number, is_driver, password } = req.body;
+    const { full_name, phone_number, is_driver, password, DoB, gender } =
+      req.body;
 
     session.startTransaction();
 
@@ -50,22 +51,29 @@ export const registerUser = async (req: Request, res: Response) => {
         channel: "sms",
       });
 
-    console.log("Twilio response:", twilioResponse);
-
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // check if the user is under 18
+    const today = new Date();
+    const birthDate = new Date(DoB);
+    if (today.getFullYear() - birthDate.getFullYear() < 18) {
+      throw new CustomError("User must be 18 years or older", 400);
+    }
 
     const newUser = await UserDAL.createOne({
       full_name,
       phone_number,
       is_driver,
       password: hashedPassword,
+      DoB,
+      gender,
     });
 
-    // await session.commitTransaction();
+    await session.commitTransaction();
     res.status(201).json(newUser);
-    // await session.endSession();
+    await session.endSession();
   } catch (error) {
-    // await session.abortTransaction();
+    await session.abortTransaction();
     console.error("Error registering user:", error);
     res.status(400).json({ error: "Error registering user" });
   }

@@ -14,6 +14,8 @@ interface CustomUserInterface extends Document {
   profile_picture?: string;
   token?: string;
   otp?: string;
+  DoB?: string;
+  gender?: string;
 }
 
 export default CustomUserInterface;

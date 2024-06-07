@@ -14,6 +14,8 @@ const CustomUserSchema = new Schema({
   profile_picture: { type: String, required: false },
   token: { type: String, required: false },
   otp: { type: String, required: false },
+  DoB: { type: Date, required: false },
+  gender: { type: String, required: false },
 });
 
 CustomUserSchema.virtual("fullName").get(function () {

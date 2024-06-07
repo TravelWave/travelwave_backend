@@ -38,6 +38,8 @@ export const Schemas = {
       is_driver: Joi.boolean().required(),
       password: Joi.string().min(6).max(100).required(),
       rating: Joi.number().min(0).max(5),
+      DoB: Joi.date().max("now"),
+      gender: Joi.string(),
     }),
   },
 };
