@@ -50,7 +50,7 @@ export async function sendRideRequestCancelledNotification(
 ) {
   try {
     // Emit a new notification event
-    io.emit("new notification", {
+    io.emit("new notification cancel", {
       userId: passenger,
       message: reason,
     });
