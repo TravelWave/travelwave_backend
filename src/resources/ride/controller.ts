@@ -6,6 +6,7 @@ import db from "../../services/db";
 import CustomUser from "./model";
 import dataAccessLayer from "../../common/dal";
 import logger from "../../common/logger";
+import { sendDestinationReachedNotification } from "../../services/notificationService";
 
 const rideDAL = dataAccessLayer(RideSchema);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
@@ -315,6 +316,73 @@ export const removePassenger = async (req: Request, res: Response) => {
   }
 };
 
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const toRad = (value) => (value * Math.PI) / 180;
+
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δφ = toRad(lat2 - lat1);
+  const Δλ = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // in meters
+};
+
+export const trackDriverLocation = async (req: Request, res: Response) => {
+  try {
+    const { latitude, longitude } = req.body;
+    const rideId = req.params.id;
+
+    const ride = await rideDAL.getOne({ _id: rideId });
+
+    if (!ride) {
+      throw new Error("Ride not found");
+    }
+
+    const destinationLatitude = ride.destination_latitude;
+    const destinationLongitude = ride.destination_longitude;
+
+    // Check if the destination coordinates are defined
+    let message = "";
+    if (destinationLatitude && destinationLongitude) {
+      const distanceToDestination = calculateDistance(
+        latitude,
+        longitude,
+        destinationLatitude,
+        destinationLongitude
+      );
+
+      const threshold = 100; // Define a threshold distance in meters
+      if (distanceToDestination <= threshold) {
+        message = "You might have reached your destination.";
+        sendDestinationReachedNotification(message);
+      }
+    }
+
+    const updatedRide = await RideSchema.findByIdAndUpdate(
+      rideId,
+      {
+        current_location_latitude: latitude,
+        current_location_longitude: longitude,
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      ride: updatedRide,
+      message,
+    });
+  } catch (error) {
+    console.error("Error tracking driver location:", error);
+    res.status(400).json({ message: error.message });
+  }
+};
+
 export default {
   createOneRide,
   createOneScheduledRide,
@@ -330,4 +398,5 @@ export default {
   paginatedRides,
   removeAllPassengers,
   removePassenger,
+  trackDriverLocation,
 };

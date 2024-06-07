@@ -25,6 +25,7 @@ router.get("/paginated-rides", rideController.paginatedRides);
 router.get("/:id", auth, rideController.getRide);
 router.put("/remove-all-passengers/", rideController.removeAllPassengers);
 router.put("/remove-passenger/", rideController.removePassenger);
+router.put("/track-driver-location/:id", rideController.trackDriverLocation);
 router.put("/:id", auth, rideController.updateRide);
 router.delete("/:id", auth, rideController.deleteRide);
 

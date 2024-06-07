@@ -58,3 +58,13 @@ export async function sendRideRequestCancelledNotification(
     console.error(`Failed to send notification: ${error}`);
   }
 }
+
+export async function sendDestinationReachedNotification(message: string) {
+  try {
+    io.emit("new notification destination", {
+      message: message,
+    });
+  } catch (error) {
+    console.log(`Failed to send notification: ${error}`);
+  }
+}
