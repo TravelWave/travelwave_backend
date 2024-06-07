@@ -28,7 +28,8 @@ export async function sendRideRequestNotification(
 export async function sendRideRequestAcceptedNotification(
   passenger: any,
   message: string,
-  fareAmount: number
+  fareAmount: number,
+  rideId: string
 ) {
   try {
     // Emit a new notification event
@@ -36,6 +37,7 @@ export async function sendRideRequestAcceptedNotification(
       userId: passenger._id,
       message: message,
       fareAmount: fareAmount,
+      rideId: rideId,
     });
   } catch (error) {
     console.error(`Failed to send notification: ${error}`);

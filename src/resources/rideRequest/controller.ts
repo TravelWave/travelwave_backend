@@ -176,7 +176,8 @@ const processOneRideRequest = async (
     await sendRideRequestAcceptedNotification(
       rideRequest.passenger,
       `${carInfo} ETA: ${eta}`,
-      fare
+      fare,
+      ride._id
     );
 
     // Update the ride and ride request within the transaction
