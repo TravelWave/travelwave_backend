@@ -2,14 +2,13 @@ import { Request, Response } from "express";
 import RideSchema from "./model";
 import RideInterface from "./interface";
 import VehicleSchema from "../vehicles/model";
-import InvertedIndexPool from "../invertedIndexPool/model";
+import db from "../../services/db";
 import CustomUser from "./model";
 import dataAccessLayer from "../../common/dal";
 import logger from "../../common/logger";
 
 const rideDAL = dataAccessLayer(RideSchema);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
-const invertedIndexPoolDAL = dataAccessLayer(InvertedIndexPool);
 const customUserDAL = dataAccessLayer(CustomUser);
 
 function decodePolyline(encoded: string) {
@@ -72,10 +71,17 @@ async function createRide(
   isScheduled: boolean,
   isPooled: boolean
 ) {
+  const session = await db.Connection.startSession();
+
   try {
+    session.startTransaction();
     const ride: RideInterface = req.body;
     const user = req.user;
     const vehicle = await getVehicleForUser(user._id);
+
+    if (vehicle.is_verified === false) {
+      throw new Error("Vehicle is not verified");
+    }
 
     ride.vehicle = vehicle.id;
     ride.is_scheduled = isScheduled;
@@ -107,16 +113,11 @@ async function createRide(
     const ridev2 = await rideDAL.getOne({ _id: createdRide._id });
     console.log("ride", ridev2._id);
 
-    const invertedIndexPool = {
-      ride_id: ridev2._id,
-      nodes,
-    };
-
-    await invertedIndexPoolDAL.createOne(invertedIndexPool);
-    logger.info("Inverted Index Pool created successfully");
-
+    await session.commitTransaction();
     res.status(201).json(createdRide);
+    await session.endSession();
   } catch (error) {
+    await session.abortTransaction();
     res.status(400).json({ message: error.message });
   }
 }
