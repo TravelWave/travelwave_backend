@@ -12,6 +12,7 @@ import {
 import {
   sendRideRequestNotification,
   sendRideRequestAcceptedNotification,
+  sendRideRequestCancelledNotification,
 } from "../../services/notificationService";
 import { oneRideFarePriceCalculator } from "../../services/priceCalculationService";
 import {
@@ -283,8 +284,14 @@ export const getScheduledPooledRideRequests = async (
 export const cancelRideRequest = async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
-    const rideRequest = await rideRequestDAL.deleteOne(id, true);
-    res.status(200).json(rideRequest);
+    const reason = req.body.reason;
+
+    const rideRequest = await rideRequestDAL.getOnePopulated({ _id: id });
+    sendRideRequestCancelledNotification(rideRequest.passenger, reason);
+
+    const response = await rideRequestDAL.deleteOne(id, true);
+
+    res.status(200).json(response);
   } catch (error) {
     res.status(404).json({ message: error.message });
   }

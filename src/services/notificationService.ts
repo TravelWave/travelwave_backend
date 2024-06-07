@@ -43,3 +43,18 @@ export async function sendRideRequestAcceptedNotification(
     console.error(`Failed to send notification: ${error}`);
   }
 }
+
+export async function sendRideRequestCancelledNotification(
+  passenger: any,
+  reason: string
+) {
+  try {
+    // Emit a new notification event
+    io.emit("new notification", {
+      userId: passenger,
+      message: reason,
+    });
+  } catch (error) {
+    console.error(`Failed to send notification: ${error}`);
+  }
+}
