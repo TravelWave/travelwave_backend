@@ -9,13 +9,13 @@ const RideSchema = new Schema({
   },
   driver: {
     type: Schema.Types.ObjectId,
-    ref: "User",
+    ref: "CustomUser",
     required: true,
   },
   passengers: [
     {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "CustomUser",
     },
   ],
   number_of_passengers: {

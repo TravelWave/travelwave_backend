@@ -461,6 +461,14 @@ export const paginatedRideRequests = async (req: Request, res: Response) => {
       filters.is_scheduled = true;
     }
 
+    const populateOpts = [
+      {
+        path: "passenger",
+        select:
+          "full_name phone_number rating is_driver is_active profile_picture",
+      },
+    ];
+
     const rideRequests = await rideRequestDAL.getPaginated(
       {},
       {
@@ -469,7 +477,8 @@ export const paginatedRideRequests = async (req: Request, res: Response) => {
         search: searchQuery,
         searchFields: [],
         filters,
-      }
+      },
+      populateOpts
     );
 
     // Count total users, passengers, and drivers

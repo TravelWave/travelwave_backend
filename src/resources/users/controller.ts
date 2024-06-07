@@ -23,34 +23,34 @@ const twilioClient = twilio(
 );
 
 export const registerUser = async (req: Request, res: Response) => {
-  // const session = await db.Connection.startSession();
+  const session = await db.Connection.startSession();
   try {
     const { full_name, phone_number, is_driver, password } = req.body;
 
-    // session.startTransaction();
+    session.startTransaction();
 
-    // if (!full_name || !phone_number || !password) {
-    //   throw new CustomError("Please provide required fields", 400);
-    // }
+    if (!full_name || !phone_number || !password) {
+      throw new CustomError("Please provide required fields", 400);
+    }
 
-    // // Check if user exists
-    // const userExists = await CustomUser.findOne({ phone_number });
+    // Check if user exists
+    const userExists = await CustomUser.findOne({ phone_number });
 
-    // if (userExists) {
-    //   throw new CustomError("User already exists", 400);
-    // }
+    if (userExists) {
+      throw new CustomError("User already exists", 400);
+    }
 
-    // console.log("Phone number:", phone_number);
+    console.log("Phone number:", phone_number);
 
-    // // Generate OTP
-    // const twilioResponse = await twilioClient.verify.v2
-    //   .services(process.env.TWILIO_SERVICE_SID)
-    //   .verifications.create({
-    //     to: phone_number,
-    //     channel: "sms",
-    //   });
+    // Generate OTP
+    const twilioResponse = await twilioClient.verify.v2
+      .services(process.env.TWILIO_SERVICE_SID)
+      .verifications.create({
+        to: phone_number,
+        channel: "sms",
+      });
 
-    // console.log("Twilio response:", twilioResponse);
+    console.log("Twilio response:", twilioResponse);
 
     const hashedPassword = await bcrypt.hash(password, 10);
 

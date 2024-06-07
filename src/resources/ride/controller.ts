@@ -3,12 +3,14 @@ import RideSchema from "./model";
 import RideInterface from "./interface";
 import VehicleSchema from "../vehicles/model";
 import InvertedIndexPool from "../invertedIndexPool/model";
+import CustomUser from "./model";
 import dataAccessLayer from "../../common/dal";
 import logger from "../../common/logger";
 
 const rideDAL = dataAccessLayer(RideSchema);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
 const invertedIndexPoolDAL = dataAccessLayer(InvertedIndexPool);
+const customUserDAL = dataAccessLayer(CustomUser);
 
 function decodePolyline(encoded: string) {
   const poly = [];
@@ -222,6 +224,14 @@ export const paginatedRides = async (req: Request, res: Response) => {
       filters.is_scheduled = true;
     }
 
+    const populateOpts = [
+      {
+        path: "driver",
+        select:
+          "full_name phone_number rating is_driver is_active profile_picture",
+      },
+    ];
+
     const rides = await rideDAL.getPaginated(
       {},
       {
@@ -230,7 +240,8 @@ export const paginatedRides = async (req: Request, res: Response) => {
         search: searchQuery,
         searchFields: [],
         filters,
-      }
+      },
+      populateOpts
     );
 
     // Count total users, passengers, and drivers

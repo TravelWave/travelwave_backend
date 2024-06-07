@@ -88,6 +88,14 @@ export const paginatedVehicles = async (req: Request, res: Response) => {
       filters.is_verified = false;
     }
 
+    const populateOpts = [
+      {
+        path: "driver",
+        select:
+          "full_name phone_number rating is_driver is_active profile_picture",
+      },
+    ];
+
     const vehicles = await vehicleDAL.getPaginated(
       {},
       {
@@ -96,7 +104,8 @@ export const paginatedVehicles = async (req: Request, res: Response) => {
         search: searchQuery,
         searchFields: [],
         filters,
-      }
+      },
+      populateOpts
     );
 
     // Count total users, passengers, and drivers

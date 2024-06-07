@@ -6,7 +6,7 @@ const status = ["pending", "accepted", "rejected"];
 const RideRequestSchema = new Schema({
   passenger: {
     type: Schema.Types.ObjectId,
-    ref: "User",
+    ref: "CustomUser",
     required: true,
   },
   start_latitude: {
