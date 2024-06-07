@@ -266,6 +266,55 @@ export const paginatedRides = async (req: Request, res: Response) => {
   }
 };
 
+// test endpoint not for production
+// remove all passengers from all rides
+export const removeAllPassengers = async (req: Request, res: Response) => {
+  try {
+    await RideSchema.updateMany(
+      {},
+      { passengers: [], number_of_passengers: 0, available_seats: 5 }
+    );
+    res.status(200).json({ message: "Passengers removed from all rides" });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// remove with a specific ID
+export const removePassenger = async (req: Request, res: Response) => {
+  try {
+    const rideId = req.body.ride_id;
+    const userId = req.body.user_id;
+
+    const ride = await rideDAL.getOne({ _id: rideId });
+
+    if (!ride) {
+      throw new Error("Ride not found");
+    }
+
+    const passengers = ride.passengers;
+    const index = passengers.indexOf(userId);
+
+    if (index > -1) {
+      passengers.splice(index, 1);
+    }
+
+    const updatedRide = await RideSchema.findByIdAndUpdate(
+      rideId,
+      {
+        passengers,
+        number_of_passengers: passengers.length,
+        available_seats: ride.available_seats + 1,
+      },
+      { new: true }
+    );
+
+    res.status(200).json(updatedRide);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 export default {
   createOneRide,
   createOneScheduledRide,
@@ -279,4 +328,6 @@ export default {
   updateRide,
   deleteRide,
   paginatedRides,
+  removeAllPassengers,
+  removePassenger,
 };
