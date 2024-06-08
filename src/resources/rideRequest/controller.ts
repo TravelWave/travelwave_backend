@@ -21,8 +21,6 @@ import {
   calculateDetourDistance,
 } from "../../services/rideShareUtils";
 import { calculateDistance } from "../../services/priceCalculationService";
-import NodeCache from "node-cache";
-const cache = new NodeCache({ stdTTL: 600 });
 
 const rideRequestDAL = dataAccessLayer(RideRequest);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
@@ -190,8 +188,16 @@ const processOneRideRequest = async (
 
     await rideDAL.updateOne(ride, ride._id);
 
+    // calculate distance
+    const array = decodePolyline(rideRequest.shortest_path);
+    const distance = calculateDistance(array);
+
     rideRequest.status = "accepted";
     rideRequest.driver = driverId;
+    rideRequest.passenger_distances = { [rideRequest.passenger]: distance };
+    rideRequest.passenger_fares = { [rideRequest.passenger]: fare };
+
+    console.log(rideRequest);
 
     const updatedRideRequest = await rideRequestDAL.updateOne(rideRequest, id);
 
@@ -199,6 +205,7 @@ const processOneRideRequest = async (
     session.endSession();
 
     res.status(200).json(updatedRideRequest);
+    res.status(200);
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -424,20 +431,27 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
         .json({ message: "Passenger is already in the ride" });
     }
 
+    if (!ride.passenger_distances) {
+      ride.passenger_distances = {};
+    }
+
     ride.passengers.push(passengerId);
-    ride.passengerDistances[passengerId] = totalDistance;
+    ride.passenger_distances[passengerId] = totalDistance;
 
     const totalRideDistance: any = Object.values(
-      ride.passengerDistances
+      ride.passenger_distances
     ).reduce((acc: number, distance: number) => acc + distance, 0);
 
-    ride.passengerFares = {};
+    if (!ride.passenger_fares) {
+      ride.passenger_fares = {};
+    }
 
-    for (const [id, dist] of Object.entries(ride.passengerDistances)) {
+    for (const [id, dist] of Object.entries(ride.passenger_distances)) {
       const passengerDistance: any = dist;
       const rideDistance: number = totalRideDistance;
-      ride.passengerFares[id] =
-        (passengerDistance / rideDistance) * ride.totalPrice;
+
+      ride.passenger_fares[id] =
+        (passengerDistance / rideDistance) * (totalDistance * 10);
     }
     await rideDAL.updateOne(ride, ride._id);
 

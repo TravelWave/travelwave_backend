@@ -159,9 +159,17 @@ export const getRide = async (req: Request, res: Response) => {
 };
 
 export const getPooledRides = async (req: Request, res: Response) => {
-  console.log("getPooledRides");
   try {
     const rides = await rideDAL.getAllPopulated({ is_pooled: true });
+
+    // get the vehicle details
+    for (let i = 0; i < rides.length; i++) {
+      const vehicle = await vehicleDAL.getOnePopulated({
+        _id: rides[i].vehicle,
+      });
+      rides[i].vehicle = vehicle;
+    }
+
     res.status(200).json(rides);
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -171,6 +179,13 @@ export const getPooledRides = async (req: Request, res: Response) => {
 export const getScheduledRides = async (req: Request, res: Response) => {
   try {
     const rides = await rideDAL.getAllPopulated({ is_scheduled: true });
+
+    for (let i = 0; i < rides.length; i++) {
+      const vehicle = await vehicleDAL.getOnePopulated({
+        _id: rides[i].vehicle,
+      });
+      rides[i].vehicle = vehicle;
+    }
     res.status(200).json(rides);
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -183,6 +198,14 @@ export const getScheduledPooledRides = async (req: Request, res: Response) => {
       is_scheduled: true,
       is_pooled: true,
     });
+
+    for (let i = 0; i < rides.length; i++) {
+      const vehicle = await vehicleDAL.getOnePopulated({
+        _id: rides[i].vehicle,
+      });
+      rides[i].vehicle = vehicle;
+    }
+
     res.status(200).json(rides);
   } catch (error) {
     res.status(404).json({ message: error.message });

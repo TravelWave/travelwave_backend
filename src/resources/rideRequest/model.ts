@@ -49,6 +49,14 @@ const RideRequestSchema = new Schema({
   scheduled_time: {
     type: Date,
   },
+  passenger_distances: {
+    type: Map,
+    of: Number,
+  },
+  passenger_fares: {
+    type: Map,
+    of: Number,
+  },
 });
 
 RideRequestSchema.set("toJSON", { virtuals: true });

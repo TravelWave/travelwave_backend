@@ -13,8 +13,8 @@ interface RideRequestInterface extends Document {
   is_pooled: boolean;
   is_scheduled: boolean;
   scheduled_time: Date;
-  passenger_distances: number[];
-  passenger_fares: number[];
+  passenger_distances: { [key: string]: number };
+  passenger_fares: { [key: string]: number };
 }
 
 export default RideRequestInterface;
