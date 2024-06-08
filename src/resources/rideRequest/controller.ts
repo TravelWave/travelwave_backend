@@ -433,7 +433,7 @@ export const askToJoinPooledRide = async (req: Request, res: Response) => {
 
     // Send a notification to the driver about the new join request
     await sendRideRequestNotification(
-      ride.driver,
+      ride._id,
       user._id,
       `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`
     );

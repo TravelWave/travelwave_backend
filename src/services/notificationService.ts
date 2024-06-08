@@ -16,7 +16,7 @@ export async function sendRideRequestNotification(
   try {
     // Emit a new notification event
     io.emit("new notification", {
-      driverId: driver._id,
+      rideId: driver,
       passengerId: passenger,
       message: message,
     });
