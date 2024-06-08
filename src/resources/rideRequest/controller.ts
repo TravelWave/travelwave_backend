@@ -26,6 +26,23 @@ const rideRequestDAL = dataAccessLayer(RideRequest);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
 const rideDAL = dataAccessLayer(RideSchema);
 
+const calculateDistance1 = (lat1, lon1, lat2, lon2) => {
+  const toRad = (value) => (value * Math.PI) / 180;
+
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δφ = toRad(lat2 - lat1);
+  const Δλ = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // in meters
+};
+
 async function fetchRoute(origin: number[], destination: number[]) {
   const response = await fetch(
     `https://graphhopper.com/api/1/route?point=${origin[0]},${origin[1]}&point=${destination[0]},${destination[1]}&key=${process.env.GRAPH_HOPPER_API_KEY}`
@@ -178,7 +195,12 @@ const processOneRideRequest = async (
       fare,
       ride._id,
       eta,
-      calculateDistance(decodePolyline(rideRequest.shortest_path))
+      calculateDistance1(
+        ride.latitude,
+        ride.longitude,
+        passenger.start_latitude,
+        passenger.start_longitude
+      )
     );
 
     // Update the ride and ride request within the transaction
