@@ -160,17 +160,31 @@ export const getRide = async (req: Request, res: Response) => {
 
 export const getPooledRides = async (req: Request, res: Response) => {
   try {
+    const { latitude, longitude } = req.body;
+
     const rides = await rideDAL.getAllPopulated({ is_pooled: true });
 
+    // show only rides that are within 1km of the user
+    const nearbyRides = rides.filter((ride) => {
+      const distance = calculateDistance(
+        latitude,
+        longitude,
+        ride.latitude,
+        ride.longitude
+      );
+
+      return distance <= 1000;
+    });
+
     // get the vehicle details
-    for (let i = 0; i < rides.length; i++) {
+    for (let i = 0; i < nearbyRides.length; i++) {
       const vehicle = await vehicleDAL.getOnePopulated({
-        _id: rides[i].vehicle,
+        _id: nearbyRides[i].vehicle,
       });
-      rides[i].vehicle = vehicle;
+      nearbyRides[i].vehicle = vehicle;
     }
 
-    res.status(200).json(rides);
+    res.status(200).json(nearbyRides);
   } catch (error) {
     res.status(404).json({ message: error.message });
   }
@@ -193,20 +207,35 @@ export const getScheduledRides = async (req: Request, res: Response) => {
 };
 
 export const getScheduledPooledRides = async (req: Request, res: Response) => {
+  const { latitude, longitude } = req.body;
+
   try {
     const rides = await rideDAL.getAllPopulated({
       is_scheduled: true,
       is_pooled: true,
     });
 
-    for (let i = 0; i < rides.length; i++) {
+    // show only rides that are within 1km of the user
+    const nearbyRides = rides.filter((ride) => {
+      const distance = calculateDistance(
+        latitude,
+        longitude,
+        ride.latitude,
+        ride.longitude
+      );
+
+      return distance <= 1000;
+    });
+
+    // get the vehicle details
+    for (let i = 0; i < nearbyRides.length; i++) {
       const vehicle = await vehicleDAL.getOnePopulated({
-        _id: rides[i].vehicle,
+        _id: nearbyRides[i].vehicle,
       });
-      rides[i].vehicle = vehicle;
+      nearbyRides[i].vehicle = vehicle;
     }
 
-    res.status(200).json(rides);
+    res.status(200).json(nearbyRides);
   } catch (error) {
     res.status(404).json({ message: error.message });
   }
