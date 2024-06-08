@@ -3,14 +3,15 @@ import RideSchema from "./model";
 import RideInterface from "./interface";
 import VehicleSchema from "../vehicles/model";
 import db from "../../services/db";
-import CustomUser from "./model";
+import RideHistory from "../rideHistory/model";
 import dataAccessLayer from "../../common/dal";
 import logger from "../../common/logger";
 import { sendDestinationReachedNotification } from "../../services/notificationService";
+import { distance } from "@turf/turf";
 
 const rideDAL = dataAccessLayer(RideSchema);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
-const customUserDAL = dataAccessLayer(CustomUser);
+const rideHistoryDAL = dataAccessLayer(RideHistory);
 
 function decodePolyline(encoded: string) {
   const poly = [];
@@ -445,6 +446,55 @@ export const trackDriverLocation = async (req: Request, res: Response) => {
   }
 };
 
+// end ride
+export const endRide = async (req: Request, res: Response) => {
+  try {
+    const rideId = req.params.id;
+    const ride = await rideDAL.getOne({ _id: rideId });
+
+    if (!ride) {
+      throw new Error("Ride not found");
+    }
+
+    let totalProfitForRide = 0;
+
+    // calculate the total profit for the ride
+    for (const fare of Object.values(ride.passenger_fares)) {
+      totalProfitForRide += fare as number;
+    }
+
+    // show the fares for each passenger
+    const passengerFares = Object.entries(ride.passenger_fares);
+    passengerFares.forEach(([passengerId, fare], index) => {
+      console.log(ride.passenger_distances);
+      // populate ride history
+      const rideHistory = {
+        ride_id: ride._id,
+        passenger: passengerId, // using passengerId directly
+        driver: ride.driver,
+        fare_amount: fare,
+        pickup_latitude: ride.latitude,
+        pickup_longitude: ride.longitude,
+        dropoff_latitude: ride.destination_latitude,
+        dropoff_longitude: ride.destination_longitude,
+        distance: ride.passenger_distances[passengerId],
+        total_earning: totalProfitForRide,
+        total_expenditure: fare,
+      };
+
+      rideHistoryDAL.createOne(rideHistory);
+    });
+
+    // delete the ride
+    await rideDAL.deleteOne(rideId, true);
+
+    res.status(200).json({ message: "Ride ended successfully" });
+  } catch (error) {
+    console.error("Error ending ride:", error);
+    res.status(400).json({ message: error.message });
+  }
+};
+
 export default {
   createOneRide,
   createOneScheduledRide,
@@ -461,4 +511,5 @@ export default {
   removeAllPassengers,
   removePassenger,
   trackDriverLocation,
+  endRide,
 };

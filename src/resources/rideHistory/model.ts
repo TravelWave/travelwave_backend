@@ -14,7 +14,7 @@ const RideHistorySchema: Schema = new Schema({
   dropoff_latitude: { type: Number, required: true },
   dropoff_longitude: { type: Number, required: true },
   fare_amount: { type: Number, required: true },
-  start_datetime: { type: Date, required: true },
+  start_datetime: { type: Date, required: false },
   distance: { type: Number, required: true },
   total_earning: { type: Number, required: false },
   total_expenditure: { type: Number, required: false },
