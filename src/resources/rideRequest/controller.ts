@@ -174,9 +174,11 @@ const processOneRideRequest = async (
     // Send notification to the user
     await sendRideRequestAcceptedNotification(
       rideRequest.passenger,
-      `${carInfo} ETA: ${eta}`,
+      carInfo,
       fare,
-      ride._id
+      ride._id,
+      eta,
+      calculateDistance(decodePolyline(rideRequest.shortest_path))
     );
 
     // Update the ride and ride request within the transaction
