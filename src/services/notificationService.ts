@@ -48,6 +48,25 @@ export async function sendRideRequestAcceptedNotification(
   }
 }
 
+export async function sendRideRequestAcceptedNotificationPooled(
+  passenger: any,
+  message: string,
+  rideId: string,
+  distance: number
+) {
+  try {
+    // Emit a new notification event
+    io.emit("new notification accepted pooled", {
+      userId: passenger,
+      message: message,
+      rideId: rideId,
+      distance: distance,
+    });
+  } catch (error) {
+    console.error(`Failed to send notification: ${error}`);
+  }
+}
+
 export async function sendRideRequestCancelledNotification(
   passenger: any,
   reason: string

@@ -17,6 +17,12 @@ interface RideInterface extends Document {
   shortest_path?: string;
   is_pooled: boolean;
   is_scheduled: boolean;
+  passenger_distances: { [key: string]: number };
+  passenger_fares: { [key: string]: number };
+  all_start_latitudes: number[];
+  all_start_longitudes: number[];
+  all_end_latitudes: number[];
+  all_end_longitudes: number[];
 }
 
 export default RideInterface;

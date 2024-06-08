@@ -325,7 +325,17 @@ export const removeAllPassengers = async (req: Request, res: Response) => {
   try {
     await RideSchema.updateMany(
       {},
-      { passengers: [], number_of_passengers: 0, available_seats: 5 }
+      {
+        passengers: [],
+        number_of_passengers: 0,
+        available_seats: 5,
+        passenger_distances: [],
+        passenger_fares: [],
+        all_start_latitudes: [],
+        all_start_longitudes: [],
+        all_end_latitudes: [],
+        all_end_longitudes: [],
+      }
     );
     res.status(200).json({ message: "Passengers removed from all rides" });
   } catch (error) {

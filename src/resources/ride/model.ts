@@ -62,6 +62,30 @@ const RideSchema = new Schema({
     type: Boolean,
     required: true,
   },
+  passenger_distances: {
+    type: Map,
+    of: Number,
+  },
+  passenger_fares: {
+    type: Map,
+    of: Number,
+  },
+  all_start_latitudes: {
+    type: [Number],
+    required: true,
+  },
+  all_start_longitudes: {
+    type: [Number],
+    required: true,
+  },
+  all_end_latitudes: {
+    type: [Number],
+    required: true,
+  },
+  all_end_longitudes: {
+    type: [Number],
+    required: true,
+  },
 });
 
 RideSchema.set("toJSON", { virtuals: true });
