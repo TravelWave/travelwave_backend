@@ -475,6 +475,7 @@ const processPooledRideRequest = async (
       rideId: rideId,
       driverId: ride.driver,
       totalDistance: totalDistance,
+      passengerId: user._id,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
