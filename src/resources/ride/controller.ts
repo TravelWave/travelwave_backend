@@ -265,12 +265,12 @@ export const paginatedRides = async (req: Request, res: Response) => {
   try {
     const { page, limit, type, search } = req.query;
 
-    const pageNumber = parseInt(page as string, 10);
-    const limitNumber = parseInt(limit as string, 10);
-    const rideType = type as string;
-    const searchQuery = search as string;
+    const pageNumber = parseInt(page as string, 10) || 1;
+    const limitNumber = parseInt(limit as string, 10) || 10;
+    const rideType = (type as string) || "";
+    const searchQuery = (search as string) || "";
 
-    // Define the filters based on the userType
+    // Define the filters based on the ride type
     const filters: any = {};
     if (rideType === "pooled") {
       filters.is_pooled = true;
@@ -282,7 +282,12 @@ export const paginatedRides = async (req: Request, res: Response) => {
       {
         path: "driver",
         select:
-          "full_name phone_number rating is_driver is_active profile_picture",
+          "full_name phone_number rating is_driver is_active profile_picture created_at updated_at",
+      },
+      {
+        path: "passengers",
+        select:
+          "full_name phone_number rating is_passenger is_active profile_picture created_at updated_at",
       },
     ];
 
@@ -298,11 +303,9 @@ export const paginatedRides = async (req: Request, res: Response) => {
       populateOpts
     );
 
-    // Count total users, passengers, and drivers
+    // Count total rides, pooled rides, and scheduled rides
     const totalRides = await RideSchema.countDocuments({});
-    const totalPooled = await RideSchema.countDocuments({
-      is_pooled: true,
-    });
+    const totalPooled = await RideSchema.countDocuments({ is_pooled: true });
     const totalScheduled = await RideSchema.countDocuments({
       is_scheduled: true,
     });

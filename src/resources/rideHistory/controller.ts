@@ -97,6 +97,28 @@ export const getRideHistoriesByUserId = async (req: Request, res: Response) => {
   }
 };
 
+export const paginatedRideHistories = async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const rideHistories = await rideHistoryDAL.getPaginated(
+      {},
+      {
+        page,
+        limit,
+        search: (req.query.search as string) || "",
+        searchFields: [],
+        filters: {},
+      }
+    );
+
+    res.status(200).json(rideHistories);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
 export default {
   createRideHistory,
   getRideHistories,
@@ -104,4 +126,5 @@ export default {
   updateRideHistory,
   deleteRideHistory,
   getRideHistoriesByUserId,
+  paginatedRideHistories,
 };
