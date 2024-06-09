@@ -32,11 +32,15 @@ export const createRideHistory = async (req: Request, res: Response) => {
       throw new Error("Ride history must have either driver or passenger");
     }
 
+    console.log("here");
     const vehicle = await vehicleDAL.getOnePopulated({ driver: id });
     const vehicleId = vehicle._id;
 
+    console.log("vehicle", vehicle);
     const ride = await rideDAL.getOnePopulated({ vehicle: vehicleId });
     const rideId = ride._id;
+
+    console.log("ride", ride);
 
     rideHistory.ride_id = rideId;
 

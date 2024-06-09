@@ -11,6 +11,7 @@ import {
 } from "../../services/driverLocationService";
 import {
   sendRideRequestNotification,
+  sendRideRequestNotification1,
   sendRideRequestAcceptedNotification,
   sendRideRequestCancelledNotification,
   sendRideRequestAcceptedNotificationPooled,
@@ -426,8 +427,16 @@ const processPooledRideRequest = async (
       ride.destination_longitude
     );
 
+    console.log(
+      ride._id,
+      user._id,
+      `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`,
+      true,
+      isScheduled
+    );
+
     // Send a notification to the driver about the new join request
-    await sendRideRequestNotification(
+    await sendRideRequestNotification1(
       ride._id,
       user._id,
       `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`,
@@ -673,7 +682,8 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
       passengerId,
       "You have accepted the ride request",
       rideId,
-      passengerDetourDistance
+      passengerDetourDistance,
+      ride.driver
     );
 
     // Save the updated ride details
