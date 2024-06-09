@@ -89,7 +89,7 @@ async function createRideRequestHelper(
     const nearbyDrivers = await findNearbyDrivers(origin);
     for (const driver of nearbyDrivers) {
       await sendRideRequestNotification(
-        driver,
+        rideRequest._id,
         user._id,
         `New ride request from ${user.full_name}`
       );
