@@ -77,7 +77,8 @@ export async function sendRideRequestAcceptedNotificationPooled(
   passenger: any,
   message: string,
   rideId: string,
-  distance: number
+  distance: number,
+  driver: any
 ) {
   try {
     // Emit a new notification event
@@ -86,6 +87,7 @@ export async function sendRideRequestAcceptedNotificationPooled(
       message: message,
       rideId: rideId,
       distance: distance,
+      driver: driver,
     });
   } catch (error) {
     console.error(`Failed to send notification: ${error}`);

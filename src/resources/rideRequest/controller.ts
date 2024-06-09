@@ -682,7 +682,8 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
       passengerId,
       "You have accepted the ride request",
       rideId,
-      passengerDetourDistance
+      passengerDetourDistance,
+      ride.driver
     );
 
     // Save the updated ride details
