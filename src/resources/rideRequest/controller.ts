@@ -579,6 +579,11 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
     const passengerEndLat = rideRequest.end_latitude;
     const passengerEndLon = rideRequest.end_longitude;
 
+    rideRequest.status = "accepted";
+
+    // Save the updated ride request details
+    await rideRequestDAL.updateOne(rideRequest, rideRequest._id);
+
     // Fetch the ride details
     const ride = await rideDAL.getOnePopulated({ _id: rideId });
 
