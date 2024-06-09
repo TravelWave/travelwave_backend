@@ -83,11 +83,11 @@ export async function sendRideRequestAcceptedNotificationPooled(
   try {
     // Emit a new notification event
     io.emit("new notification accepted pooled", {
-      userId: passenger,
+      passenger: passenger,
       message: message,
       rideId: rideId,
       distance: distance,
-      driver: driver,
+      userId: driver,
     });
   } catch (error) {
     console.error(`Failed to send notification: ${error}`);
