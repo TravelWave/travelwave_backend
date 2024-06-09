@@ -17,7 +17,7 @@ export const getMessage = async (req: Request, res: Response) => {
 				path: "messages",
 				populate: {
 					path: "senderId receiverId",
-					select: "full_name is_driver ",
+					select: "full_name is_driver profile_picture",
 				},
 			});
 
@@ -63,7 +63,7 @@ export const sendMessage = async (req: Request, res: Response) => {
 			.findById(newMessage._id)
 			.populate({
 				path: "senderId receiverId",
-				select: "full_name is_driver ",
+				select: "full_name  is_driver profile_picture",
 			});
 
 		io.to(receiverId).emit("new message", populatedMessage);
