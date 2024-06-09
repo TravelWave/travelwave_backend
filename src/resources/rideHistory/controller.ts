@@ -106,6 +106,19 @@ export const paginatedRideHistories = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
 
+    const populateOpts = [
+      {
+        path: "passenger",
+        select:
+          "full_name phone_number rating is_driver is_active profile_picture",
+      },
+      {
+        path: "driver",
+        select:
+          "full_name phone_number rating is_driver is_active profile_picture",
+      },
+    ];
+
     const rideHistories = await rideHistoryDAL.getPaginated(
       {},
       {
@@ -114,12 +127,46 @@ export const paginatedRideHistories = async (req: Request, res: Response) => {
         search: (req.query.search as string) || "",
         searchFields: [],
         filters: {},
-      }
+      },
+      populateOpts
     );
 
     res.status(200).json(rideHistories);
   } catch (error) {
     res.status(404).json({ message: error.message });
+  }
+};
+
+export const getRidesPerDay = async (req: Request, res: Response) => {
+  try {
+    // Define the aggregation pipeline
+    const pipeline = [
+      {
+        $match: {
+          start_datetime: { $exists: true },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$start_datetime" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { _id: 1 as 1 | -1 },
+      },
+    ];
+
+    // Execute the aggregation
+    const ridesPerDay = await RideHistorySchema.aggregate(pipeline).exec();
+
+    // Respond with the result
+    res.status(200).json(ridesPerDay);
+  } catch (error) {
+    console.error("Error fetching rides per day:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -131,4 +178,5 @@ export default {
   deleteRideHistory,
   getRideHistoriesByUserId,
   paginatedRideHistories,
+  getRidesPerDay,
 };

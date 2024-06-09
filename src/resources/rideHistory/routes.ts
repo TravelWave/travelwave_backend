@@ -7,6 +7,7 @@ const router: Router = Router();
 
 router.post("/", auth, rideHistoryController.createRideHistory);
 router.get("/paginated", rideHistoryController.paginatedRideHistories);
+router.get("/days", rideHistoryController.getRidesPerDay);
 router.get("/", auth, rideHistoryController.getRideHistories);
 router.get("/:id", auth, rideHistoryController.getRideHistory);
 router.put("/:id", auth, rideHistoryController.updateRideHistory);
