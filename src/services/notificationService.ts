@@ -11,7 +11,9 @@ io.on("connection", (socket) => {
 export async function sendRideRequestNotification(
   driver: any,
   passenger: any,
-  message: string
+  message: string,
+  pooled: boolean,
+  scheduled: boolean
 ) {
   try {
     // Emit a new notification event
@@ -19,6 +21,8 @@ export async function sendRideRequestNotification(
       rideId: driver,
       passengerId: passenger,
       message: message,
+      pooled: pooled,
+      scheduled: scheduled,
     });
   } catch (error) {
     console.error(`Failed to send notification: ${error}`);

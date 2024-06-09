@@ -91,7 +91,9 @@ async function createRideRequestHelper(
       await sendRideRequestNotification(
         rideRequest._id,
         user._id,
-        `New ride request from ${user.full_name}`
+        `New ride request from ${user.full_name}`,
+        rideRequest.is_pooled,
+        rideRequest.is_scheduled
       );
     }
 
@@ -428,7 +430,9 @@ const processPooledRideRequest = async (
     await sendRideRequestNotification(
       ride._id,
       user._id,
-      `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`
+      `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`,
+      true,
+      isScheduled
     );
 
     const passengerShortestPath = await fetchRoute(
