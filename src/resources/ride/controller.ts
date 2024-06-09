@@ -7,7 +7,6 @@ import RideHistory from "../rideHistory/model";
 import dataAccessLayer from "../../common/dal";
 import logger from "../../common/logger";
 import { sendDestinationReachedNotification } from "../../services/notificationService";
-import { distance } from "@turf/turf";
 
 const rideDAL = dataAccessLayer(RideSchema);
 const vehicleDAL = dataAccessLayer(VehicleSchema);

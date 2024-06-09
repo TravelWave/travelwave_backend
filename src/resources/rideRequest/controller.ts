@@ -86,14 +86,6 @@ async function createRideRequestHelper(
 
     const createdRideRequest = await rideRequestDAL.createOne(rideRequest);
 
-    console.log(
-      rideRequest._id,
-      user._id,
-      `New ride request from ${user.full_name}`,
-      rideRequest.is_pooled,
-      rideRequest.is_scheduled
-    );
-
     const nearbyDrivers = await findNearbyDrivers(origin);
     for (const driver of nearbyDrivers) {
       await sendRideRequestNotification(
@@ -250,7 +242,7 @@ const processOneRideRequest = async (
     await session.commitTransaction();
     session.endSession();
 
-    res.status(200).json(updatedRideRequest);
+    res.status(200).json({ ride: ride._id, updatedRideRequest });
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
