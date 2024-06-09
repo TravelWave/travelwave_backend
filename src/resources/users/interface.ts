@@ -13,7 +13,6 @@ interface CustomUserInterface extends Document {
   is_active: boolean;
   profile_picture?: string;
   token?: string;
-  otp?: string;
   DoB?: string;
   gender?: string;
 }

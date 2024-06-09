@@ -256,17 +256,6 @@ export const createOneScheduledRideRequest = (req: Request, res: Response) => {
   createRideRequestHelper(req, res, true, false);
 };
 
-export const createPooledRideRequest = (req: Request, res: Response) => {
-  createRideRequestHelper(req, res, false, true);
-};
-
-export const createPooledScheduledRideRequest = (
-  req: Request,
-  res: Response
-) => {
-  createRideRequestHelper(req, res, true, true);
-};
-
 export const getRideRequests = async (req: Request, res: Response) => {
   try {
     const rideRequests = await rideRequestDAL.getMany({});
@@ -374,10 +363,14 @@ export const acceptOneScheduledRideRequest = async (
   processOneRideRequest(req, res, true);
 };
 
-export const askToJoinPooledRide = async (req: Request, res: Response) => {
+// Helper function to handle common logic
+const processPooledRideRequest = async (
+  req: Request,
+  res: Response,
+  isScheduled: boolean
+) => {
   try {
     const rideId = req.params.id;
-
     const user = req.user;
 
     // Fetch the ride details
@@ -411,7 +404,7 @@ export const askToJoinPooledRide = async (req: Request, res: Response) => {
         .json({ message: "The ride is not in the same direction" });
     }
 
-    // check for remaining seats
+    // Check for remaining seats
     if (ride.available_seats === 0) {
       return res.status(400).json({ message: "No available seats" });
     }
@@ -423,7 +416,7 @@ export const askToJoinPooledRide = async (req: Request, res: Response) => {
       newPassengerEndLocation
     );
 
-    // calculate the total distance the user would travel if accepted in to the ride
+    // Calculate the total distance the user would travel if accepted into the ride
     const totalDistance = calculateDistance2(
       ride.latitude,
       ride.longitude,
@@ -438,24 +431,28 @@ export const askToJoinPooledRide = async (req: Request, res: Response) => {
       `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`
     );
 
-    const passenger_shortest_path = await fetchRoute(
+    const passengerShortestPath = await fetchRoute(
       newPassengerStartLocation,
       newPassengerEndLocation
     );
 
-    // create a pooled ride request
-    const newRideRequest = {
+    // Create a new ride request object
+    const newRideRequest: any = {
       passenger: user._id,
       start_latitude: passengerRequest.start_latitude,
       start_longitude: passengerRequest.start_longitude,
       end_latitude: passengerRequest.end_latitude,
       end_longitude: passengerRequest.end_longitude,
       is_pooled: true,
-      is_scheduled: false,
+      is_scheduled: isScheduled,
       request_time: new Date(),
-      shortest_path: passenger_shortest_path,
+      shortest_path: passengerShortestPath,
       status: "pending",
     };
+
+    if (isScheduled) {
+      newRideRequest.scheduled_time = new Date(passengerRequest.scheduled_time);
+    }
 
     await rideRequestDAL.createOne(newRideRequest);
 
@@ -469,6 +466,17 @@ export const askToJoinPooledRide = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+export const askToJoinPooledRide = async (req: Request, res: Response) => {
+  await processPooledRideRequest(req, res, false);
+};
+
+export const askToJoinPooledRideScheduled = async (
+  req: Request,
+  res: Response
+) => {
+  await processPooledRideRequest(req, res, true);
 };
 
 const calculateDistance2 = (
@@ -745,8 +753,6 @@ export const paginatedRideRequests = async (req: Request, res: Response) => {
 export default {
   createOneRideRequest,
   createOneScheduledRideRequest,
-  createPooledRideRequest,
-  createPooledScheduledRideRequest,
   getRideRequests,
   getRideRequest,
   getPooledRideRequests,
@@ -760,4 +766,5 @@ export default {
   askToJoinPooledRide,
   paginatedRideRequests,
   deleteAllRideRequests,
+  askToJoinPooledRideScheduled,
 };

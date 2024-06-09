@@ -13,7 +13,6 @@ const CustomUserSchema = new Schema({
   is_active: { type: Boolean, default: false },
   profile_picture: { type: String, required: false },
   token: { type: String, required: false },
-  otp: { type: String, required: false },
   DoB: { type: Date, required: false },
   gender: { type: String, required: false },
 });

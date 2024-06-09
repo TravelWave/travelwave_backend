@@ -5,7 +5,6 @@ import helmet from "helmet";
 import compression from "compression";
 import routes from "./common/routes";
 import errorHandler from "./middlewares/errorHandler";
-import logger from "./common/logger";
 
 const app: Application = express();
 

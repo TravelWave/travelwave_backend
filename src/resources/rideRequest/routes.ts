@@ -16,14 +16,14 @@ router.post(
   rideRequestController.createOneScheduledRideRequest
 );
 router.post(
-  "/createPooledRideRequest",
+  "/createPooledRideRequest/:id",
   auth,
-  rideRequestController.createPooledRideRequest
+  rideRequestController.askToJoinPooledRide
 );
 router.post(
-  "/createPooledScheduledRideRequest",
+  "/createScheduledPooledRideRequest/:id",
   auth,
-  rideRequestController.createPooledScheduledRideRequest
+  rideRequestController.askToJoinPooledRideScheduled
 );
 router.get("/", auth, rideRequestController.getRideRequests);
 router.get("/pooled", auth, rideRequestController.getPooledRideRequests);
