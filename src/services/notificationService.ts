@@ -29,6 +29,27 @@ export async function sendRideRequestNotification(
   }
 }
 
+export async function sendRideRequestNotification1(
+  driver: any,
+  passenger: any,
+  message: string,
+  pooled: boolean,
+  scheduled: boolean
+) {
+  try {
+    // Emit a new notification event
+    io.emit("new notification ask", {
+      rideId: driver,
+      passengerId: passenger,
+      message: message,
+      pooled: pooled,
+      scheduled: scheduled,
+    });
+  } catch (error) {
+    console.error(`Failed to send notification: ${error}`);
+  }
+}
+
 export async function sendRideRequestAcceptedNotification(
   passenger: any,
   message: string,
