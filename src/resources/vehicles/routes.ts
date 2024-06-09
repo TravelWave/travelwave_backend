@@ -15,7 +15,7 @@ router.get(
 );
 router.get("/", auth, vehicleController.getVehicles);
 router.get("/:id", auth, vehicleController.getVehicle);
-router.put("verify/:id", auth, vehicleController.verifyVehicle);
+router.put("/verify/:id", vehicleController.verifyVehicle);
 router.put("/:id", auth, vehicleController.updateVehicle);
 router.delete("/:id", auth, vehicleController.deleteVehicle);
 
