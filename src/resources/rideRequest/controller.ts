@@ -464,7 +464,7 @@ const processPooledRideRequest = async (
       message: "Join request sent to the driver",
       detourDistance: detourDistance,
       rideId: rideId,
-      passengerId: req.user._id,
+      passengerId: ride.driver,
       totalDistance: totalDistance,
     });
   } catch (error) {
