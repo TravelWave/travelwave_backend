@@ -86,14 +86,22 @@ async function createRideRequestHelper(
 
     const createdRideRequest = await rideRequestDAL.createOne(rideRequest);
 
+    console.log(
+      rideRequest._id,
+      user._id,
+      `New ride request from ${user.full_name}`,
+      rideRequest.is_pooled,
+      rideRequest.is_scheduled
+    );
+
     const nearbyDrivers = await findNearbyDrivers(origin);
     for (const driver of nearbyDrivers) {
       await sendRideRequestNotification(
-        rideRequest._id,
+        createdRideRequest._id,
         user._id,
         `New ride request from ${user.full_name}`,
-        rideRequest.is_pooled,
-        rideRequest.is_scheduled
+        createdRideRequest.is_pooled,
+        createdRideRequest.is_scheduled
       );
     }
 
