@@ -302,8 +302,9 @@ export const deleteUserAccount = async (req: Request, res: Response) => {
 export const getUserData = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log("ID:", id);
 
-    const user = await CustomUser.findOne({ id });
+    const user = await UserDAL.getOne({ _id: id });
 
     res.status(200).json(user);
   } catch (error) {
