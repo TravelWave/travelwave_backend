@@ -441,9 +441,7 @@ const processPooledRideRequest = async (
       newPassengerEndLocation
     );
 
-    ride.shortest_path = passengerShortestPath;
-
-    const existingRoute = decodePolyline(ride.shortest_path);
+    const existingRoute = decodePolyline(passengerShortestPath);
     const isSameDirection = checkDirection(
       existingRoute,
       newPassengerStartLocation,
@@ -468,15 +466,12 @@ const processPooledRideRequest = async (
       newPassengerEndLocation
     );
 
-    ride.destination_latitude = passengerRequest.end_latitude;
-    ride.destination_longitude = passengerRequest.end_longitude;
-
     // Calculate the total distance the user would travel if accepted into the ride
     const totalDistance = calculateDistance2(
       ride.latitude,
       ride.longitude,
-      ride.destination_latitude,
-      ride.destination_longitude
+      passengerRequest.end_latitude,
+      passengerRequest.end_longitude
     );
 
     // Send a notification to the driver about the new join request
