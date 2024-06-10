@@ -436,6 +436,13 @@ const processPooledRideRequest = async (
       });
     }
 
+    const passengerShortestPath = await fetchRoute(
+      newPassengerStartLocation,
+      newPassengerEndLocation
+    );
+
+    ride.shortest_path = passengerShortestPath;
+
     const existingRoute = decodePolyline(ride.shortest_path);
     const isSameDirection = checkDirection(
       existingRoute,
@@ -461,20 +468,15 @@ const processPooledRideRequest = async (
       newPassengerEndLocation
     );
 
+    ride.destination_latitude = passengerRequest.end_latitude;
+    ride.destination_longitude = passengerRequest.end_longitude;
+
     // Calculate the total distance the user would travel if accepted into the ride
     const totalDistance = calculateDistance2(
       ride.latitude,
       ride.longitude,
       ride.destination_latitude,
       ride.destination_longitude
-    );
-
-    console.log(
-      ride._id,
-      user._id,
-      `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`,
-      true,
-      isScheduled
     );
 
     // Send a notification to the driver about the new join request
@@ -484,11 +486,6 @@ const processPooledRideRequest = async (
       `New join request from ${req.user.full_name}. Detour distance: ${detourDistance}`,
       true,
       isScheduled
-    );
-
-    const passengerShortestPath = await fetchRoute(
-      newPassengerStartLocation,
-      newPassengerEndLocation
     );
 
     // Create a new ride request object
