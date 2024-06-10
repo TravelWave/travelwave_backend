@@ -1,3 +1,4 @@
+import { request } from "http";
 import { io } from "../socket";
 
 io.on("connection", (socket) => {
@@ -56,10 +57,10 @@ export async function sendRideRequestAcceptedNotification(
   fareAmount: number,
   rideId: string,
   eta: string,
-  distance: number
+  distance: number,
+  rideRequest: any
 ) {
   try {
-    console.log("sendRideRequestAcceptedNotification");
     // Emit a new notification event
     io.emit("new notification accepted", {
       driverId: passenger,
@@ -68,6 +69,7 @@ export async function sendRideRequestAcceptedNotification(
       rideId: rideId,
       eta: eta,
       distance: distance,
+      requestId: rideRequest,
     });
   } catch (error) {
     console.error(`Failed to send notification: ${error}`);
@@ -79,7 +81,8 @@ export async function sendRideRequestAcceptedNotificationPooled(
   message: string,
   rideId: string,
   distance: number,
-  driver: any
+  driver: any,
+  rideRequest: any
 ) {
   try {
     // Emit a new notification event
@@ -88,7 +91,8 @@ export async function sendRideRequestAcceptedNotificationPooled(
       message: message,
       rideId: rideId,
       distance: distance,
-      userId: driver,
+      driver: driver,
+      requestId: rideRequest,
     });
   } catch (error) {
     console.error(`Failed to send notification: ${error}`);

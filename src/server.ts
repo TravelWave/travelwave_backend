@@ -9,17 +9,6 @@ const PORT = process.env.PORT || 8000;
 
 export const httpServer = createServer(app);
 
-io.on("connection", (socket) => {
-  logger.info("a user connected");
-
-  // Handle disconnection
-  socket.on("disconnect", () => {
-    logger.info("user disconnected");
-  });
-});
-
-io.listen(httpServer);
-
 httpServer.listen(PORT, () => {
   logger.info(
     `up and running in ${
@@ -27,3 +16,5 @@ httpServer.listen(PORT, () => {
     } @: ${os.hostname()} on port ${PORT}`
   );
 });
+
+io.listen(httpServer);

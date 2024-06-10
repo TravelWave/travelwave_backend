@@ -237,18 +237,6 @@ const processOneRideRequest = async (
       calculatedDistance1 * 10,
     ]);
 
-    console.log(
-      car.driver,
-      carInfo,
-      fare,
-      ride._id,
-      eta,
-      ride.latitude,
-      ride.longitude,
-      passenger.start_latitude,
-      passenger.start_longitude
-    );
-
     // Send notification to the user
     await sendRideRequestAcceptedNotification(
       car.driver,
@@ -261,7 +249,8 @@ const processOneRideRequest = async (
         ride.longitude,
         passenger.start_latitude,
         passenger.start_longitude
-      )
+      ),
+      rideRequest._id
     );
 
     // Update the ride and ride request within the transaction
@@ -742,7 +731,8 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
       "You have accepted the ride request",
       rideId,
       passengerDetourDistance,
-      ride.driver
+      ride.driver,
+      rideRequest._id
     );
 
     // Save the updated ride details

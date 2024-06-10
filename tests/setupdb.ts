@@ -1,36 +1,27 @@
-import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
+import { MongoMemoryServer } from "mongodb-memory-server";
+import dotenv from "dotenv";
 
-let mongoServer: { getUri: () => any; stop: () => any };
+dotenv.config();
 
-/**
- * Connect to mock memory db
- */
+let mongoServer: MongoMemoryServer;
+
 export const connect = async () => {
-  await mongoose.disconnect();
-
   mongoServer = await MongoMemoryServer.create();
-  const URI = await mongoServer.getUri();
-
-  mongoose
-    .connect(URI)
-    .then(() => {
-      console.log(`Connected to mongo testing server at ${URI}`);
-    })
-    .catch((err) => {
-      console.log(err);
-    });
+  const uri = mongoServer.getUri();
+  await mongoose.connect(uri);
 };
 
 export const closeDatabase = async () => {
-  await mongoose.disconnect();
+  await mongoose.connection.dropDatabase();
+  await mongoose.connection.close();
+  await mongoServer.stop();
 };
 
 export const clearDatabase = async () => {
-  const collections = await mongoose.connection.db.collections();
-
-  for (let i = 0; i < collections.length; i += 1) {
-    /* eslint-disable-next-line no-await-in-loop */
-    await collections[i].deleteMany({});
+  const collections = mongoose.connection.collections;
+  for (const key in collections) {
+    const collection = collections[key];
+    await collection.deleteMany({});
   }
 };
