@@ -59,9 +59,10 @@ export async function sendRideRequestAcceptedNotification(
   distance: number
 ) {
   try {
+    console.log("sendRideRequestAcceptedNotification");
     // Emit a new notification event
     io.emit("new notification accepted", {
-      userId: passenger._id,
+      driverId: passenger,
       message: message,
       fareAmount: fareAmount,
       rideId: rideId,

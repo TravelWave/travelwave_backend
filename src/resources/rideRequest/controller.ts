@@ -26,6 +26,19 @@ const rideRequestDAL = dataAccessLayer(RideRequest);
 const vehicleDAL = dataAccessLayer(VehicleSchema);
 const rideDAL = dataAccessLayer(RideSchema);
 
+function isWithinBoundingBox(lat, lon, north, south, east, west) {
+  const isLatWithin = lat >= south && lat <= north;
+  const isLonWithin = lon >= west && lon <= east;
+
+  return isLatWithin && isLonWithin;
+}
+
+// Define bounding box coordinates
+const north = 9.099356;
+const south = 8.837944;
+const east = 38.905462;
+const west = 38.651214;
+
 const calculateDistance1 = (lat1, lon1, lat2, lon2) => {
   const toRad = (value) => (value * Math.PI) / 180;
 
@@ -64,6 +77,20 @@ async function createRideRequestHelper(
   try {
     const rideRequest: RideRequestInterface = req.body;
     const user = req.user;
+
+    // check if the user is within the bounding box
+    const isWithin = isWithinBoundingBox(
+      rideRequest.end_latitude,
+      rideRequest.end_longitude,
+      north,
+      south,
+      east,
+      west
+    );
+
+    if (!isWithin) {
+      throw new Error("Destination is out of bounds of Addis Ababa");
+    }
 
     rideRequest.passenger = user._id;
     rideRequest.request_time = new Date();
@@ -111,7 +138,6 @@ const processOneRideRequest = async (
 ) => {
   const session = await db.Connection.startSession();
   session.startTransaction();
-
   try {
     const id = req.params.id;
     const driverId = req.user._id;
@@ -211,9 +237,21 @@ const processOneRideRequest = async (
       calculatedDistance1 * 10,
     ]);
 
+    console.log(
+      car.driver,
+      carInfo,
+      fare,
+      ride._id,
+      eta,
+      ride.latitude,
+      ride.longitude,
+      passenger.start_latitude,
+      passenger.start_longitude
+    );
+
     // Send notification to the user
     await sendRideRequestAcceptedNotification(
-      rideRequest.passenger,
+      car.driver,
       carInfo,
       fare,
       ride._id,
@@ -393,6 +431,21 @@ const processPooledRideRequest = async (
       passengerRequest.end_latitude,
       passengerRequest.end_longitude,
     ];
+
+    const isWithin = isWithinBoundingBox(
+      passengerRequest.end_latitude,
+      passengerRequest.end_longitude,
+      north,
+      south,
+      east,
+      west
+    );
+
+    if (!isWithin) {
+      return res.status(400).json({
+        message: "Destination is out of bounds of Addis Ababa",
+      });
+    }
 
     const existingRoute = decodePolyline(ride.shortest_path);
     const isSameDirection = checkDirection(

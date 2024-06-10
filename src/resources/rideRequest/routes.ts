@@ -44,13 +44,13 @@ router.get(
 );
 router.get("/:id", auth, rideRequestController.getRideRequest);
 router.delete("/delete/", rideRequestController.deleteAllRideRequests);
-router.delete("/:id", auth, rideRequestController.cancelRideRequest);
 router.put("/:id/accept", auth, rideRequestController.acceptOneRideRequest);
 router.put(
   "/:id/accept/scheduled",
   auth,
   rideRequestController.acceptOneScheduledRideRequest
 );
+router.delete("/:id", auth, rideRequestController.cancelRideRequest);
 
 router.post(
   "/ask-to-join/:id",
