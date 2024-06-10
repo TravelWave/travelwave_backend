@@ -668,6 +668,28 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
     const latestEndLat = Math.max(...ride.all_end_latitudes);
     const latestEndLon = Math.max(...ride.all_end_longitudes);
 
+    const currentFarthestEndLat = Math.max(ride.end_latitude, latestEndLat);
+    const currentFarthestEndLon = Math.max(ride.end_longitude, latestEndLon);
+
+    if (
+      currentFarthestEndLat !== ride.end_latitude ||
+      currentFarthestEndLon !== ride.end_longitude
+    ) {
+      ride.end_latitude = currentFarthestEndLat;
+      ride.end_longitude = currentFarthestEndLon;
+    }
+
+    // compute shortest path
+    const origin = [earliestStartLat, earliestStartLon];
+    const destination = [latestEndLat, latestEndLon];
+
+    const shortestPath = await fetchRoute(origin, destination);
+    if (!shortestPath) {
+      throw new Error("No path found");
+    }
+
+    ride.shortest_path = shortestPath;
+
     // Calculate the total ride distance
     const totalRideDistance = calculateDistance2(
       earliestStartLat,
