@@ -131,7 +131,10 @@ export const paginatedRideHistories = async (req: Request, res: Response) => {
       populateOpts
     );
 
-    res.status(200).json(rideHistories);
+    // get the total counts
+    const total = await RideHistorySchema.countDocuments();
+
+    res.status(200).json({ rideHistories, total });
   } catch (error) {
     res.status(404).json({ message: error.message });
   }
