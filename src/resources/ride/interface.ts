@@ -23,6 +23,8 @@ interface RideInterface extends Document {
   all_start_longitudes: number[];
   all_end_latitudes: number[];
   all_end_longitudes: number[];
+  current_passenger_latitude: number;
+  current_passenger_longitude: number;
 }
 
 export default RideInterface;

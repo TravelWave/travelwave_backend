@@ -86,6 +86,14 @@ const RideSchema = new Schema({
     type: [Number],
     required: true,
   },
+  current_passenger_latitude: {
+    type: Number,
+    required: false,
+  },
+  current_passenger_longitude: {
+    type: Number,
+    required: false,
+  },
 });
 
 RideSchema.set("toJSON", { virtuals: true });

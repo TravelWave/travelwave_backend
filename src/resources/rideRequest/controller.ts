@@ -715,8 +715,10 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
       rideRequest._id
     );
 
-    ride.destination_latitude = rideRequest.end_latitude;
-    ride.destination_longitude = rideRequest.end_longitude;
+    ride.current_passenger_latitude = passengerStartLat;
+    ride.current_passenger_longitude = passengerStartLon;
+    ride.destination_latitude = passengerEndLat;
+    ride.destination_longitude = passengerEndLon;
 
     // Save the updated ride details
     await rideDAL.updateOne(ride, ride._id);
