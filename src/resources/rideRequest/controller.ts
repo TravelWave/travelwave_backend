@@ -391,6 +391,7 @@ const processPooledRideRequest = async (
     }
 
     const passengerRequest = req.body;
+    console.log("Passenger request:", passengerRequest);
 
     const newPassengerStartLocation = [
       passengerRequest.start_latitude,
@@ -713,6 +714,9 @@ export const acceptPooledRideRequest = async (req: Request, res: Response) => {
       ride.driver,
       rideRequest._id
     );
+
+    ride.destination_latitude = rideRequest.end_latitude;
+    ride.destination_longitude = rideRequest.end_longitude;
 
     // Save the updated ride details
     await rideDAL.updateOne(ride, ride._id);
